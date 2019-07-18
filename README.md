@@ -1,6 +1,6 @@
 # Atmospheres for CosmoScout VR
 
-A CosmoScout VR plugin for drawing atmospheres around celestial bodies. This plugin is built as part of CosmoScout's build process. See the [main repository](https://github.com/cosmoscout/cosmoscout-vr) for instructions.
+A CosmoScout VR plugin for drawing atmospheres around celestial bodies. It calculates single Mie- and Rayleigh scattering via raycasting in real-time. This plugin is built as part of CosmoScout's build process. See the [main repository](https://github.com/cosmoscout/cosmoscout-vr) for instructions.
 
 ## Configuration
 
