@@ -50,7 +50,6 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
   o.mRayleighScatteringG = j.at("rayleighScatteringG").get<double>();
   o.mRayleighScatteringB = j.at("rayleighScatteringB").get<double>();
   o.mRayleighAnisotropy  = j.at("rayleighAnisotropy").get<double>();
-  o.mSunIntensity        = j.at("sunIntensity").get<double>();
 
   auto iter = j.find("cloudTexture");
   if (iter != j.end()) {
@@ -110,25 +109,21 @@ void Plugin::init() {
           *atmoSettings.second.mCloudHeight);
     }
 
-    atmosphere->getAtmosphere().setAtmosphereHeight(atmoSettings.second.mAtmosphereHeight);
-    atmosphere->getAtmosphere().setMieHeight(atmoSettings.second.mMieHeight);
-    atmosphere->getAtmosphere().setMieScattering(VistaVector3D(
-        (float)atmoSettings.second.mMieScatteringR, (float)atmoSettings.second.mMieScatteringG,
-        (float)atmoSettings.second.mMieScatteringB));
-    atmosphere->getAtmosphere().setMieAnisotropy(atmoSettings.second.mMieAnisotropy);
-    atmosphere->getAtmosphere().setRayleighHeight(atmoSettings.second.mRayleighHeight);
-    atmosphere->getAtmosphere().setRayleighScattering(
-        VistaVector3D((float)atmoSettings.second.mRayleighScatteringR,
-            (float)atmoSettings.second.mRayleighScatteringG,
-            (float)atmoSettings.second.mRayleighScatteringB));
-    atmosphere->getAtmosphere().setRayleighAnisotropy(atmoSettings.second.mRayleighAnisotropy);
-    atmosphere->getAtmosphere().setSunIntensity((float)atmoSettings.second.mSunIntensity);
+    atmosphere->setHDRBuffer(mGraphicsEngine->getHDRBuffer());
+    atmosphere->setAtmosphereHeight(atmoSettings.second.mAtmosphereHeight);
+    atmosphere->setMieHeight(atmoSettings.second.mMieHeight);
+    atmosphere->setMieScattering(glm::vec3(atmoSettings.second.mMieScatteringR,
+        atmoSettings.second.mMieScatteringG, atmoSettings.second.mMieScatteringB));
+    atmosphere->setMieAnisotropy(atmoSettings.second.mMieAnisotropy);
+    atmosphere->setRayleighHeight(atmoSettings.second.mRayleighHeight);
+    atmosphere->setRayleighScattering(glm::vec3(atmoSettings.second.mRayleighScatteringR,
+        atmoSettings.second.mRayleighScatteringG, atmoSettings.second.mRayleighScatteringB));
+    atmosphere->setRayleighAnisotropy(atmoSettings.second.mRayleighAnisotropy);
 
     VistaOpenGLNode* atmosphereNode =
         mSceneGraph->NewOpenGLNode(mSceneGraph->GetRoot(), atmosphere.get());
     VistaOpenSGMaterialTools::SetSortKeyOnSubtree(
         atmosphereNode, static_cast<int>(cs::utils::DrawOrder::eAtmospheres));
-    atmosphere->setSun(mSolarSystem->getSun());
 
     mAtmosphereNodes.push_back(atmosphereNode);
     mAtmospheres.push_back(atmosphere);
@@ -151,6 +146,48 @@ void Plugin::init() {
 
   mGuiManager->getSideBar()->registerCallback<double>(
       "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
+
+  mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
+    for (auto const& atmosphere : mAtmospheres) {
+      if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
+        atmosphere->setShadowMap(mGraphicsEngine->getShadowMap());
+      } else {
+        atmosphere->setShadowMap(nullptr);
+      }
+    }
+  });
+
+  mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
+    for (auto const& atmosphere : mAtmospheres) {
+      if (val) {
+        atmosphere->setHDRBuffer(mGraphicsEngine->getHDRBuffer());
+      } else {
+        atmosphere->setHDRBuffer(nullptr);
+      }
+    }
+  });
+
+  mProperties->mEnableLightShafts.onChange().connect([this](bool val) {
+    for (auto const& atmosphere : mAtmospheres) {
+      if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
+        atmosphere->setShadowMap(mGraphicsEngine->getShadowMap());
+      } else {
+        atmosphere->setShadowMap(nullptr);
+      }
+    }
+  });
+
+  mGraphicsEngine->pAmbientBrightness.onChange().connect([this](float val) {
+    for (auto const& atmosphere : mAtmospheres) {
+      atmosphere->setAmbientBrightness(val * 0.4f);
+    }
+  });
+
+  mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
+    for (auto const& atmosphere : mAtmospheres) {
+      atmosphere->setUseToneMapping(!val, 0.6f, 2.2f);
+    }
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,7 +215,7 @@ void Plugin::update() {
   float fIntensity = 1.f;
   for (auto const& atmosphere : mAtmospheres) {
     if (mProperties->mEnabled.get()) {
-      float brightness = atmosphere->getAtmosphere().getApproximateSceneBrightness();
+      float brightness = atmosphere->getApproximateSceneBrightness();
       fIntensity *= (1.f - brightness);
     }
   }
@@ -186,7 +223,17 @@ void Plugin::update() {
   mGraphicsEngine->pApproximateSceneBrightness = fIntensity;
 
   for (auto const& atmosphere : mAtmospheres) {
-    atmosphere->setSun(mSolarSystem->getSun());
+    auto sunDirection =
+        mSolarSystem->pSunPosition.get() - glm::dvec3(atmosphere->getWorldTransform()[3]);
+    double sunDist = glm::length(sunDirection);
+    double sunIlluminance =
+        mSolarSystem->pSunLuminousPower.get() / (sunDist * sunDist * 4.0 * glm::pi<double>());
+
+    if (!mGraphicsEngine->pEnableHDR.get()) {
+      sunIlluminance = 10.0;
+    }
+
+    atmosphere->setSun(sunDirection.xyz() / sunDist, sunIlluminance);
   }
 }
 

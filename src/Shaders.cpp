@@ -4,13 +4,11 @@
 //                        Copyright: (c) 2019 German Aerospace Center (DLR)                       //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "VistaAtmosphere.hpp"
+#include "Atmosphere.hpp"
 
 namespace csp::atmospheres {
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-const std::string VistaAtmosphere::cAtmosphereVert = R"(
+const std::string Atmosphere::cAtmosphereVert = R"(
   #version 400
 
   // inputs
@@ -53,10 +51,8 @@ const std::string VistaAtmosphere::cAtmosphereVert = R"(
   }
 )";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // needs to be splitted because MSVC doesn't like long strings
-const std::string VistaAtmosphere::cAtmosphereFrag0 = R"(
+const std::string Atmosphere::cAtmosphereFrag0 = R"(
   #version 400
 
   // inputs
@@ -70,19 +66,20 @@ const std::string VistaAtmosphere::cAtmosphereFrag0 = R"(
 
   // uniforms
   // ===========================================================================
-  uniform sampler2DRect uDepthBuffer;
-  uniform sampler2DRect uColorBuffer;
-  uniform sampler2D     uTransmittanceTexture;
-  uniform sampler2D     uCloudTexture;
-  uniform mat4          uMatInvMVP;
-  uniform mat4          uMatInvMV;
-  uniform mat4          uMatInvP;
-  uniform mat4          uMatMV;
-  uniform vec3          uSunDir;
-  uniform float         uWaterLevel;
-  uniform float         uCloudAltitude;
-  uniform float         uAmbientBrightness;
-  uniform float         uFarClip;
+  uniform sampler2D uDepthBuffer;
+  uniform sampler2D uColorBuffer;
+  uniform sampler2D uTransmittanceTexture;
+  uniform sampler2D uCloudTexture;
+  uniform mat4      uMatInvMVP;
+  uniform mat4      uMatInvMV;
+  uniform mat4      uMatInvP;
+  uniform mat4      uMatMV;
+  uniform vec3      uSunDir;
+  uniform float     uSunIntensity;
+  uniform float     uWaterLevel;
+  uniform float     uCloudAltitude;
+  uniform float     uAmbientBrightness;
+  uniform float     uFarClip;
 
   // shadow stuff
   uniform sampler2DShadow uShadowMaps[5];
@@ -312,7 +309,7 @@ const std::string VistaAtmosphere::cAtmosphereFrag0 = R"(
                                   + GetOpticalDepth(vRayOrigin, vRayDir, 0, fTIntersection));
     float density = SampleCloudDensity(point);
 
-    return vec4(extinction * density, density);
+    return vec4(extinction * density * uSunIntensity, density);
   }
 
   vec4 GetCloudColor(vec3 vRayOrigin, vec3 vRayDir, vec3 vSunDir, float fOpaqueDepth)
@@ -399,10 +396,8 @@ const std::string VistaAtmosphere::cAtmosphereFrag0 = R"(
 
   )";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // needs to be splitted because MSVC doesn't like long strings
-const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
+const std::string Atmosphere::cAtmosphereFrag1 = R"(
 
   // returns the color of the incoming light for any direction and position
   // ===========================================================================
@@ -466,7 +461,7 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
       vec3 vInScatter = sumR * BR * GetPhase(fCosine, ANISOTROPY_R) +
                         sumM * BM * GetPhase(fCosine, ANISOTROPY_M);
 
-      return ToneMapping(SUN_INTENSITY * vInScatter);
+      return ToneMapping(uSunIntensity * vInScatter);
   }
 
   // returns the model space distance to the surface of the depth buffer at the
@@ -474,8 +469,8 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
   // ===========================================================================
   float GetOpaqueDepth()
   {
-      vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
-      float fDepth     = texture(uDepthBuffer, vTexcoords).r;
+      vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+      float fDepth     = texture(uDepthBuffer, vsIn.vTexcoords).r;
 
       #if USE_LINEARDEPTHBUFFER
 
@@ -534,8 +529,7 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
   // ===========================================================================
   vec3 GetLandColor()
   {
-    vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
-    return texture(uColorBuffer, vTexcoords).rgb;
+    return texture(uColorBuffer, vsIn.vTexcoords).rgb;
   }
 
   // returns a hard-coded color scale for a given ocean depth.
@@ -562,8 +556,7 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
   vec3 GetWaterColor(vec3 vRayOrigin, vec3 vRayDir, vec2 vStartEnd)
   {
     // sub-water surface
-    vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
-    vec3 color = texture(uColorBuffer, vTexcoords).rgb;
+    vec3 color = texture(uColorBuffer, vsIn.vTexcoords).rgb;
 
     vec3 surface = vRayOrigin + vRayDir * vStartEnd.x;
     vec3 normal = normalize(surface);
@@ -659,15 +652,14 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
 
         #if USE_CLOUDMAP
           // add clouds themselves
-          oColor += cloudColor.rgb * (1 - uAmbientBrightness) * 0.8;
+          oColor += cloudColor.rgb * (1 - uAmbientBrightness) * 0.08;
         #endif
-
       }
 
       // sun position ----------------------------------------------------------
       #if DRAW_SUN
-        vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
-        float fDepth     = texture(uDepthBuffer, vTexcoords).r;
+        vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+        float fDepth     = texture(uDepthBuffer, vsIn.vTexcoords).r;
 
         if (fDepth == 1.0) {
             float fSunAngle = max(0,dot(vRayDir, uSunDir));
@@ -679,7 +671,4 @@ const std::string VistaAtmosphere::cAtmosphereFrag1 = R"(
       #endif
   }
 )";
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 } // namespace csp::atmospheres

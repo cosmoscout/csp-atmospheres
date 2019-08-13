@@ -44,7 +44,6 @@ class Plugin : public cs::core::PluginBase {
       double                     mRayleighScatteringG;
       double                     mRayleighScatteringB;
       double                     mRayleighAnisotropy;
-      double                     mSunIntensity;
       std::optional<std::string> mCloudTexture; ///< Path to the cloud texture.
       std::optional<double>      mCloudHeight;  ///< Relative to the planets radius.
     };
