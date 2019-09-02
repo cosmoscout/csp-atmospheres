@@ -68,7 +68,7 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
 
 void from_json(const nlohmann::json& j, Plugin::Settings& o) {
   try {
-    cs::core::parseSettingsSection("csp-atmospheres", [&] {
+    cs::core::parseSettingsSection("csp-atmospheres.atmospheres", [&] {
       o.mAtmospheres = j.at("atmospheres").get<std::map<std::string, Plugin::Settings::Atmosphere>>();
     });
   } catch (std::exception const& e) {
