@@ -51,15 +51,10 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
   o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
   o.mSunIntensity        = cs::core::parseProperty<double>("sunIntensity", j);
 
-  auto iter = j.find("cloudTexture");
-  if (iter != j.end()) {
-    o.mCloudTexture = iter->get<std::optional<std::string>>();
-  }
+  o.mCloudTexture = cs::core::parseOptional<std::string>("cloudTexture", j);
 
-  iter = j.find("cloudHeight");
-  if (iter != j.end()) {
-    o.mCloudHeight = iter->get<std::optional<double>>();
-  } else {
+  o.mCloudHeight = cs::core::parseOptional<double>("cloudHeight", j);
+  if (!o.mCloudHeight) {
     o.mCloudHeight = 0.001;
   }
 }
@@ -67,8 +62,9 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void from_json(const nlohmann::json& j, Plugin::Settings& o) {
-  cs::core::parseSettingsSection("csp-atmospheres.atmospheres", [&] {
-    o.mAtmospheres = j.at("atmospheres").get<std::map<std::string, Plugin::Settings::Atmosphere>>();
+  cs::core::parseSection("csp-atmospheres", [&] {
+    o.mAtmospheres =
+        cs::core::parseMap<std::string, Plugin::Settings::Atmosphere>("atmospheres", j);
   });
 }
 
