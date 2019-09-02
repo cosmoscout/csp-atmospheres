@@ -38,43 +38,38 @@ namespace csp::atmospheres {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
-    o.mAtmosphereHeight    = cs::core::parseProperty<double>("atmosphereHeight", j);
-    o.mMieHeight           = cs::core::parseProperty<double>("mieHeight", j);
-    o.mMieScatteringR      = cs::core::parseProperty<double>("mieScatteringR", j);
-    o.mMieScatteringG      = cs::core::parseProperty<double>("mieScatteringG", j);
-    o.mMieScatteringB      = cs::core::parseProperty<double>("mieScatteringB", j);
-    o.mMieAnisotropy       = cs::core::parseProperty<double>("mieAnisotropy", j);
-    o.mRayleighHeight      = cs::core::parseProperty<double>("rayleighHeight", j);
-    o.mRayleighScatteringR = cs::core::parseProperty<double>("rayleighScatteringR", j);
-    o.mRayleighScatteringG = cs::core::parseProperty<double>("rayleighScatteringG", j);
-    o.mRayleighScatteringB = cs::core::parseProperty<double>("rayleighScatteringB", j);
-    o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
-    o.mSunIntensity        = cs::core::parseProperty<double>("sunIntensity", j);
+  o.mAtmosphereHeight    = cs::core::parseProperty<double>("atmosphereHeight", j);
+  o.mMieHeight           = cs::core::parseProperty<double>("mieHeight", j);
+  o.mMieScatteringR      = cs::core::parseProperty<double>("mieScatteringR", j);
+  o.mMieScatteringG      = cs::core::parseProperty<double>("mieScatteringG", j);
+  o.mMieScatteringB      = cs::core::parseProperty<double>("mieScatteringB", j);
+  o.mMieAnisotropy       = cs::core::parseProperty<double>("mieAnisotropy", j);
+  o.mRayleighHeight      = cs::core::parseProperty<double>("rayleighHeight", j);
+  o.mRayleighScatteringR = cs::core::parseProperty<double>("rayleighScatteringR", j);
+  o.mRayleighScatteringG = cs::core::parseProperty<double>("rayleighScatteringG", j);
+  o.mRayleighScatteringB = cs::core::parseProperty<double>("rayleighScatteringB", j);
+  o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
+  o.mSunIntensity        = cs::core::parseProperty<double>("sunIntensity", j);
 
-    auto iter = j.find("cloudTexture");
-    if (iter != j.end()) {
-      o.mCloudTexture = iter->get<std::optional<std::string>>();
-    }
+  auto iter = j.find("cloudTexture");
+  if (iter != j.end()) {
+    o.mCloudTexture = iter->get<std::optional<std::string>>();
+  }
 
-    iter = j.find("cloudHeight");
-    if (iter != j.end()) {
-      o.mCloudHeight = iter->get<std::optional<double>>();
-    } else {
-      o.mCloudHeight = 0.001;
-    }
+  iter = j.find("cloudHeight");
+  if (iter != j.end()) {
+    o.mCloudHeight = iter->get<std::optional<double>>();
+  } else {
+    o.mCloudHeight = 0.001;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void from_json(const nlohmann::json& j, Plugin::Settings& o) {
-  try {
-    cs::core::parseSettingsSection("csp-atmospheres.atmospheres", [&] {
-      o.mAtmospheres = j.at("atmospheres").get<std::map<std::string, Plugin::Settings::Atmosphere>>();
-    });
-  } catch (std::exception const& e) {
-    std::cerr << e.what() << std::endl;
-    throw e;
-  }
+  cs::core::parseSettingsSection("csp-atmospheres.atmospheres", [&] {
+    o.mAtmospheres = j.at("atmospheres").get<std::map<std::string, Plugin::Settings::Atmosphere>>();
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
