@@ -11,7 +11,7 @@ namespace csp::atmospheres {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const std::string VistaAtmosphere::cAtmosphereVert = R"(
-  #version 400
+  #version 330
 
   // inputs
   // ===========================================================================
@@ -57,7 +57,7 @@ const std::string VistaAtmosphere::cAtmosphereVert = R"(
 
 // needs to be splitted because MSVC doesn't like long strings
 const std::string VistaAtmosphere::cAtmosphereFrag0 = R"(
-  #version 400
+  #version 330
 
   // inputs
   // ===========================================================================
