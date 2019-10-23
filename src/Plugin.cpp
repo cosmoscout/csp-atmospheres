@@ -12,8 +12,6 @@
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/TextureLoader.hpp"
-#include "../../../src/cs-utils/convert.hpp"
-#include "../../../src/cs-utils/utils.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -39,27 +37,22 @@ namespace csp::atmospheres {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
-  o.mAtmosphereHeight    = j.at("atmosphereHeight").get<double>();
-  o.mMieHeight           = j.at("mieHeight").get<double>();
-  o.mMieScatteringR      = j.at("mieScatteringR").get<double>();
-  o.mMieScatteringG      = j.at("mieScatteringG").get<double>();
-  o.mMieScatteringB      = j.at("mieScatteringB").get<double>();
-  o.mMieAnisotropy       = j.at("mieAnisotropy").get<double>();
-  o.mRayleighHeight      = j.at("rayleighHeight").get<double>();
-  o.mRayleighScatteringR = j.at("rayleighScatteringR").get<double>();
-  o.mRayleighScatteringG = j.at("rayleighScatteringG").get<double>();
-  o.mRayleighScatteringB = j.at("rayleighScatteringB").get<double>();
-  o.mRayleighAnisotropy  = j.at("rayleighAnisotropy").get<double>();
+  o.mAtmosphereHeight    = cs::core::parseProperty<double>("atmosphereHeight", j);
+  o.mMieHeight           = cs::core::parseProperty<double>("mieHeight", j);
+  o.mMieScatteringR      = cs::core::parseProperty<double>("mieScatteringR", j);
+  o.mMieScatteringG      = cs::core::parseProperty<double>("mieScatteringG", j);
+  o.mMieScatteringB      = cs::core::parseProperty<double>("mieScatteringB", j);
+  o.mMieAnisotropy       = cs::core::parseProperty<double>("mieAnisotropy", j);
+  o.mRayleighHeight      = cs::core::parseProperty<double>("rayleighHeight", j);
+  o.mRayleighScatteringR = cs::core::parseProperty<double>("rayleighScatteringR", j);
+  o.mRayleighScatteringG = cs::core::parseProperty<double>("rayleighScatteringG", j);
+  o.mRayleighScatteringB = cs::core::parseProperty<double>("rayleighScatteringB", j);
+  o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
 
-  auto iter = j.find("cloudTexture");
-  if (iter != j.end()) {
-    o.mCloudTexture = iter->get<std::optional<std::string>>();
-  }
+  o.mCloudTexture = cs::core::parseOptional<std::string>("cloudTexture", j);
 
-  iter = j.find("cloudHeight");
-  if (iter != j.end()) {
-    o.mCloudHeight = iter->get<std::optional<double>>();
-  } else {
+  o.mCloudHeight = cs::core::parseOptional<double>("cloudHeight", j);
+  if (!o.mCloudHeight) {
     o.mCloudHeight = 0.001;
   }
 }
@@ -67,7 +60,10 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void from_json(const nlohmann::json& j, Plugin::Settings& o) {
-  o.mAtmospheres = j.at("atmospheres").get<std::map<std::string, Plugin::Settings::Atmosphere>>();
+  cs::core::parseSection("csp-atmospheres", [&] {
+    o.mAtmospheres =
+        cs::core::parseMap<std::string, Plugin::Settings::Atmosphere>("atmospheres", j);
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,8 +91,9 @@ void Plugin::init() {
           "There is no Anchor \"" + atmoSettings.first + "\" defined in the settings.");
     }
 
-    double tStartExistence = cs::utils::convert::toSpiceTime(anchor->second.mStartExistence);
-    double tEndExistence   = cs::utils::convert::toSpiceTime(anchor->second.mEndExistence);
+    auto   existence       = cs::core::getExistenceFromSettings(*anchor);
+    double tStartExistence = existence.first;
+    double tEndExistence   = existence.second;
 
     auto atmosphere = std::make_shared<Atmosphere>(mGraphicsEngine, mProperties,
         anchor->second.mCenter, anchor->second.mFrame, tStartExistence, tEndExistence);
