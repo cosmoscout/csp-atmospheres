@@ -53,7 +53,8 @@ const std::string Atmosphere::cAtmosphereVert = R"(
 
 // needs to be splitted because MSVC doesn't like long strings
 const std::string Atmosphere::cAtmosphereFrag0 = R"(
-  #version 330
+  #version 400
+  // version 400 is required here for the dynamic index in uShadowMaps
 
   // inputs
   // ===========================================================================
@@ -135,7 +136,7 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
   
       if (cascade < 0)
       {
-          return 1;
+          return 1.0;
       }
   
       vec3 coords = GetShadowMapCoords(cascade, position);
@@ -150,7 +151,7 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
           }
       }
   
-      return shadow / 9;
+      return shadow / 9.0;
   }
 
   // returns the probability of scattering
@@ -477,7 +478,7 @@ const std::string Atmosphere::cAtmosphereFrag1 = R"(
         // We need to return a distance which is guaranteed to be larger
         // than the largest ray length possible. As the atmosphere has a
         // radius of 1.0, 1000000 is more than enough.
-        if (fDepth == 1) return 1000000;
+        if (fDepth == 1) return 1000000.0;
 
         float linearDepth = fDepth * uFarClip;
         vec4 posFarPlane = uMatInvP * vec4(2.0*vsIn.vTexcoords-1, 1.0, 1.0);
@@ -491,7 +492,6 @@ const std::string Atmosphere::cAtmosphereFrag1 = R"(
         return length(vsIn.vRayOrigin - vPos.xyz / vPos.w);
 
       #endif
-
   }
   
   // crops the intersections to the view ray
