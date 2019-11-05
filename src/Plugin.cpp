@@ -220,17 +220,15 @@ void Plugin::update() {
   mGraphicsEngine->pApproximateSceneBrightness = fIntensity;
 
   for (auto const& atmosphere : mAtmospheres) {
-    auto sunDirection =
-        mSolarSystem->pSunPosition.get() - glm::dvec3(atmosphere->getWorldTransform()[3]);
-    double sunDist = glm::length(sunDirection);
-    double sunIlluminance =
-        mSolarSystem->pSunLuminousPower.get() / (sunDist * sunDist * 4.0 * glm::pi<double>());
+    double sunIlluminance = 10.0;
 
-    if (!mGraphicsEngine->pEnableHDR.get()) {
-      sunIlluminance = 10.0;
+    if (mGraphicsEngine->pEnableHDR.get()) {
+      sunIlluminance = mSolarSystem->getSunIlluminance(atmosphere->getWorldTransform()[3]);
     }
 
-    atmosphere->setSun(sunDirection.xyz() / sunDist, sunIlluminance);
+    auto sunDirection = mSolarSystem->getSunDirection(atmosphere->getWorldTransform()[3]);
+
+    atmosphere->setSun(sunDirection, sunIlluminance);
   }
 }
 
