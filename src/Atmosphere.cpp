@@ -35,7 +35,7 @@ Atmosphere::Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphic
   mAtmosphere.setPrimaryRaySteps(mProperties->mQuality.get());
 
   // scene-wide settings -----------------------------------------------------
-  mGraphicsEngine->pAmbientBrightness.onChange().connect(
+  mAmbientBrightnessConnection = mGraphicsEngine->pAmbientBrightness.onChange().connect(
       [this](float val) { mAtmosphere.setAmbientBrightness(val * 0.4f); });
 
   mProperties->mQuality.onChange().connect(
@@ -50,7 +50,7 @@ Atmosphere::Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphic
   mProperties->mWaterLevel.onChange().connect(
       [this](float val) { mAtmosphere.setWaterLevel(val / 1000); });
 
-  mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
+  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
     mAtmosphere.setShadowMap(
         (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get())
             ? mGraphicsEngine->getShadowMap()
@@ -63,6 +63,13 @@ Atmosphere::Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphic
             ? mGraphicsEngine->getShadowMap()
             : nullptr);
   });
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Atmosphere::~Atmosphere() {
+  mGraphicsEngine->pAmbientBrightness.onChange().disconnect(mAmbientBrightnessConnection);
+  mGraphicsEngine->pEnableShadows.onChange().disconnect(mEnableShadowsConnection);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
