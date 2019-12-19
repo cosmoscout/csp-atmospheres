@@ -131,22 +131,22 @@ void Plugin::init() {
     mAtmospheres.push_back(atmosphere);
   }
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_water", ([this](bool enable) { mProperties->mEnableWater = enable; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_clouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_atmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_light_shafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<double>(
+  mGuiManager->getGui()->registerCallback<double>(
       "set_atmosphere_quality", ([this](const int value) { mProperties->mQuality = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<double>(
+  mGuiManager->getGui()->registerCallback<double>(
       "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
 }
 
@@ -161,12 +161,12 @@ void Plugin::deInit() {
     mSceneGraph->GetRoot()->DisconnectChild(atmosphereNode);
   }
 
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_water");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_clouds");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_atmosphere");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_light_shafts");
-  mGuiManager->getSideBar()->unregisterCallback("set_atmosphere_quality");
-  mGuiManager->getSideBar()->unregisterCallback("set_water_level");
+  mGuiManager->getGui()->unregisterCallback("set_enable_water");
+  mGuiManager->getGui()->unregisterCallback("set_enable_clouds");
+  mGuiManager->getGui()->unregisterCallback("set_enable_atmosphere");
+  mGuiManager->getGui()->unregisterCallback("set_enable_light_shafts");
+  mGuiManager->getGui()->unregisterCallback("set_atmosphere_quality");
+  mGuiManager->getGui()->unregisterCallback("set_water_level");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
