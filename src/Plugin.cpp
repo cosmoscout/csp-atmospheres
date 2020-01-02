@@ -82,7 +82,7 @@ void Plugin::init() {
 
   mGuiManager->addSettingsSectionToSideBarFromHTML(
       "Atmospheres", "blur_circular", "../share/resources/gui/atmospheres_settings.html");
-    mGuiManager->addScriptToGuiFromJS("../share/resources/gui/js/atmospheres_settings.js");
+  mGuiManager->addScriptToGuiFromJS("../share/resources/gui/js/atmospheres_settings.js");
 
   for (auto const& atmoSettings : mPluginSettings.mAtmospheres) {
     auto anchor = mAllSettings->mAnchors.find(atmoSettings.first);
