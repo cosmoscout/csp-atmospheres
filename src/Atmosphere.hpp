@@ -28,7 +28,7 @@ class Atmosphere : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
   Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphicsEngine,
       std::shared_ptr<Plugin::Properties> const& pProperties, std::string const& sCenterName,
       std::string const& sFrameName, double tStartExistence, double tEndExistence);
-  ~Atmosphere() override = default;
+  ~Atmosphere();
 
   void setSun(std::shared_ptr<const cs::scene::CelestialObject> const& sun);
   void setCloudTexture(std::shared_ptr<VistaTexture> const& texture, double height);
@@ -49,6 +49,8 @@ class Atmosphere : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
   std::shared_ptr<VistaTexture>                     mCloudTexture;
   double                                            mCloudHeight = 0.001;
   glm::dvec3                                        mRadii;
+  int                                               mAmbientBrightnessConnection = -1;
+  int                                               mEnableShadowsConnection     = -1;
 };
 
 } // namespace csp::atmospheres
