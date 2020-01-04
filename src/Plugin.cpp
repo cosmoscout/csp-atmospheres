@@ -12,6 +12,7 @@
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/TextureLoader.hpp"
+#include "../../../src/cs-utils/logger.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -71,12 +72,16 @@ void from_json(const nlohmann::json& j, Plugin::Settings& o) {
 
 Plugin::Plugin()
     : mProperties(std::make_shared<Properties>()) {
+
+  // Create default logger for this plugin.
+  cs::utils::logger::init("csp-atmospheres");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::init() {
-  std::cout << "Loading: CosmoScout VR Plugin Atmosphere" << std::endl;
+
+  spdlog::info("Loading plugin...");
 
   mPluginSettings = mAllSettings->mPlugins.at("csp-atmospheres");
 
@@ -148,11 +153,15 @@ void Plugin::init() {
 
   mGuiManager->getSideBar()->registerCallback<double>(
       "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
+
+  spdlog::info("Loading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::deInit() {
+  spdlog::info("Unloading plugin...");
+
   for (auto const& atmosphere : mAtmospheres) {
     mSolarSystem->unregisterAnchor(atmosphere);
   }
@@ -167,6 +176,8 @@ void Plugin::deInit() {
   mGuiManager->getSideBar()->unregisterCallback("set_enable_light_shafts");
   mGuiManager->getSideBar()->unregisterCallback("set_atmosphere_quality");
   mGuiManager->getSideBar()->unregisterCallback("set_water_level");
+
+  spdlog::info("Unloading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
