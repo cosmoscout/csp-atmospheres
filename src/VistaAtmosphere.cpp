@@ -126,7 +126,7 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
   VistaXML::TiXmlDocument xDoc(sConfigFile);
 
   if (!xDoc.LoadFile()) {
-    spdlog::error("Failed to load atmosphere config file {}: Cannot open file.", sConfigFile);
+    spdlog::error("Failed to load atmosphere config: Cannot open file '{}'!", sConfigFile);
     return;
   }
 
@@ -135,7 +135,9 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
 
   // Read Data
   if (std::string(pRoot->Value()) != "AtmosphereConfig") {
-    spdlog::error("Failed to read atmosphere config file {}.", sConfigFile);
+    spdlog::error(
+        "Failed to read atmosphere config file '{}': There is no 'AtmosphereConfig' root element!",
+        sConfigFile);
     return;
   }
 
@@ -170,11 +172,11 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
       } else if (sName == "SunIntensity") {
         ssValue >> mSunIntensity;
       } else {
-        spdlog::warn(
-            "Ignoring invalid entity {} while reading star config file {}.", sName, sConfigFile);
+        spdlog::warn("Ignoring invalid entity '{}' while reading star config file '{}'!", sName,
+            sConfigFile);
       }
     } else {
-      spdlog::warn("Ignoring invalid entity {} while reading star config file {}.",
+      spdlog::warn("Ignoring invalid entity '{}' while reading star config file '{}'!",
           pProperty->Value(), sConfigFile);
     }
 
