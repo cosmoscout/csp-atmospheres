@@ -10,6 +10,7 @@
 
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/GuiManager.hpp"
+#include "../../../src/cs-core/MessageBus.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/TextureLoader.hpp"
 
@@ -131,23 +132,145 @@ void Plugin::init() {
     mAtmospheres.push_back(atmosphere);
   }
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_water", ([this](bool enable) { mProperties->mEnableWater = enable; }));
+  mGuiManager->getGui()->registerCallback<bool>("set_enable_water", ([this](bool enable) {
+    mProperties->mEnableWater = enable;
+    mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres", "water",
+        std::to_string(enable)});
+  }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_clouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
+  mGuiManager->getGui()->registerCallback<bool>("set_enable_clouds", ([this](bool enable) {
+    mProperties->mEnableClouds = enable;
+    mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres", "clouds",
+        std::to_string(enable)});
+  }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_atmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
+  mGuiManager->getGui()->registerCallback<bool>("set_enable_atmosphere", ([this](bool enable) {
+    mProperties->mEnabled = enable;
+    mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres",
+        "atmosphere", std::to_string(enable)});
+  }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_light_shafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+  mGuiManager->getGui()->registerCallback<bool>("set_enable_light_shafts", ([this](bool enable) {
+    mProperties->mEnableLightShafts = enable;
+    mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres",
+        "light_shafts", std::to_string(enable)});
+  }));
 
   mGuiManager->getGui()->registerCallback<double>(
-      "set_atmosphere_quality", ([this](const int value) { mProperties->mQuality = value; }));
+      "set_atmosphere_quality", ([this](const int value) {
+        mProperties->mQuality = value;
+        mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres",
+            "atmosphere_quality", std::to_string(value)});
+      }));
 
-  mGuiManager->getGui()->registerCallback<double>(
-      "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
+  mGuiManager->getGui()->registerCallback<double>("set_water_level", ([this](double value) {
+    mProperties->mWaterLevel = value;
+    mMessageBus->send({cs::core::MessageBus::Response::Type::eChanged, "csp::atmospheres",
+        "water_level", std::to_string(value)});
+  }));
+
+  mMessageBus->onRequest().connect([this](cs::core::MessageBus::Request const& request) {
+    std::string scope = "csp::atmospheres";
+    if (request.mReceiver != scope) {
+      return;
+    }
+
+    if (request.mType == cs::core::MessageBus::Request::Type::eGet) {
+      cs::core::MessageBus::Response response;
+      response.mType  = cs::core::MessageBus::Response::Type::eInfo;
+      response.mSender = scope;
+      response.mName  = request.mName;
+
+      if (request.mName == "water") {
+        response.mData = std::to_string(mProperties->mEnableWater.get());
+      } else if (request.mName == "clouds") {
+        response.mData = std::to_string(mProperties->mEnableClouds.get());
+      } else if (request.mName == "atmosphere") {
+        response.mData = std::to_string(mProperties->mEnabled.get());
+      } else if (request.mName == "light_shafts") {
+        response.mData = std::to_string(mProperties->mEnableLightShafts.get());
+      } else if (request.mName == "atmosphere_quality") {
+        response.mData = std::to_string(mProperties->mQuality.get());
+      } else if (request.mName == "water_level") {
+        response.mData = std::to_string(mProperties->mWaterLevel.get());
+      } else {
+        return;
+      }
+
+      mMessageBus->send(response);
+    } else if (request.mType == cs::core::MessageBus::Request::Type::eSet) {
+      cs::core::MessageBus::Response response;
+      response.mType  = cs::core::MessageBus::Response::Type::eChanged;
+      response.mSender = scope;
+      response.mName  = request.mName;
+
+      if (request.mName == "water") {
+        if (mProperties->mEnableWater.get() == std::stoi(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setCheckboxValue", "set_enable_water", request.mData);
+          mProperties->mEnableWater.set(std::stoi(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mEnableWater.get());
+      } else if (request.mName == "clouds") {
+        if (mProperties->mEnableClouds.get() == std::stoi(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setCheckboxValue", "set_enable_clouds", request.mData);
+          mProperties->mEnableClouds.set(std::stoi(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mEnableClouds.get());
+      } else if (request.mName == "atmosphere") {
+        if (mProperties->mEnabled.get() == std::stoi(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setCheckboxValue", "set_enable_atmosphere", request.mData);
+          mProperties->mEnabled.set(std::stoi(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mEnabled.get());
+      } else if (request.mName == "light_shafts") {
+        if (mProperties->mEnableLightShafts.get() == std::stoi(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setCheckboxValue", "set_enable_light_shafts", request.mData);
+          mProperties->mEnableLightShafts.set(std::stoi(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mEnableLightShafts.get());
+      } else if (request.mName == "atmosphere_quality") {
+        if (mProperties->mQuality.get() == std::stoi(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setSliderValue", "set_atmosphere_quality", std::stoi(request.mData));
+          mProperties->mQuality.set(std::stoi(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mQuality.get());
+      } else if (request.mName == "water_level") {
+        if (mProperties->mWaterLevel.get() == std::stof(request.mData)) {
+          response.mType = cs::core::MessageBus::Response::Type::eInfo;
+        } else {
+          mGuiManager->getGui()->callJavascript(
+              "CosmoScout.setSliderValue", "set_water_level", std::stof(request.mData));
+          mProperties->mWaterLevel.set(std::stof(request.mData));
+        }
+
+        response.mData = std::to_string(mProperties->mWaterLevel.get());
+      } else {
+        return;
+      }
+
+      mMessageBus->send(response);
+    }
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -186,6 +309,10 @@ void Plugin::update() {
     atmosphere->setSun(mSolarSystem->getSun());
   }
 }
+
+    void Plugin::listenFor(std::string, cs::utils::Property<bool>) {
+
+    }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -64,6 +64,8 @@ class Plugin : public cs::core::PluginBase {
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
   std::vector<VistaOpenGLNode*>            mAtmosphereNodes;
   std::shared_ptr<Properties>              mProperties;
+
+  void listenFor(std::string, cs::utils::Property<bool>);
 };
 
 } // namespace csp::atmospheres
