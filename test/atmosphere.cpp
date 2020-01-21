@@ -9,7 +9,7 @@
 
 // Graphical tests rely on Xvfb and image magick and therefore they are only available on Linux
 #ifdef __linux__
-/*
+
 #include <VistaBase/VistaExceptionBase.h>
 #include <VistaBase/VistaStreamUtils.h>
 #include <VistaKernel/EventManager/VistaEventHandler.h>
@@ -141,5 +141,5 @@ TEST_CASE("[graphical] csp::atmospheres::VistaAtmosphere") {
   CHECK(result == "0 (0)");
 }
 } // namespace csp::atmospheres
-*/
+
 #endif
