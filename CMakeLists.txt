@@ -13,6 +13,7 @@ endif()
 # build plugin -------------------------------------------------------------------------------------
 
 file(GLOB SOURCE_FILES src/*.cpp)
+file(GLOB TEST_FILES test/*.cpp)
 
 # Resoucre files and header files are only added in order to make them available in your IDE.
 file(GLOB HEADER_FILES src/*.hpp)
@@ -22,6 +23,7 @@ add_library(csp-atmospheres SHARED
   ${SOURCE_FILES}
   ${HEADER_FILES}
   ${RESOUCRE_FILES}
+  ${TEST_FILES}
 )
 
 target_link_libraries(csp-atmospheres
@@ -42,6 +44,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
 
 # install plugin -----------------------------------------------------------------------------------
 
-install(TARGETS   csp-atmospheres DESTINATION "share/plugins")
-install(DIRECTORY "textures"      DESTINATION "share/resources")
-install(DIRECTORY "gui"           DESTINATION "share/resources")
+install(TARGETS   csp-atmospheres  DESTINATION "share/plugins")
+install(DIRECTORY "textures"       DESTINATION "share/resources")
+install(DIRECTORY "gui"            DESTINATION "share/resources")
+install(DIRECTORY "test/reference" DESTINATION "bin/test")
