@@ -64,8 +64,7 @@ TEST_CASE("[graphical] csp::atmospheres::VistaAtmosphere") {
   atmosphere->loadPreset(VistaAtmosphere::Preset::eMars);
   pSG->NewOpenGLNode(pPlanetTransform, atmosphere);
 
-  // Do the image comparision, allowing for a slight maximum per-pixel difference of 1%.
-  CHECK(compare.doComparison() < 1.f);
+  CHECK_LT(compare.doComparison(), 1.f);
 }
 } // namespace csp::atmospheres
 
