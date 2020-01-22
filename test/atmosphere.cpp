@@ -4,100 +4,41 @@
 //                        Copyright: (c) 2019 German Aerospace Center (DLR)                       //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "../../../src/cs-utils/TestImageCompare.hpp"
 #include "../../../src/cs-utils/doctest.hpp"
 #include "../src/VistaAtmosphere.hpp"
 
 // Graphical tests rely on Xvfb and image magick and therefore they are only available on Linux
 #ifdef __linux__
 
-#include <VistaBase/VistaExceptionBase.h>
-#include <VistaBase/VistaStreamUtils.h>
-#include <VistaKernel/EventManager/VistaEventHandler.h>
-#include <VistaKernel/EventManager/VistaEventManager.h>
-#include <VistaKernel/EventManager/VistaSystemEvent.h>
 #include <VistaKernel/GraphicsManager/VistaGeometryFactory.h>
-#include <VistaKernel/GraphicsManager/VistaLightNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
 #include <VistaKernel/GraphicsManager/VistaTransformNode.h>
-#include <VistaKernel/InteractionManager/VistaKeyboardSystemControl.h>
-#include <VistaKernel/VistaFrameLoop.h>
 #include <VistaKernel/VistaSystem.h>
 #include <VistaTools/VistaRandomNumberGenerator.h>
 
 namespace csp::atmospheres {
 
-const float       PLANET_RADIUS(10.f);
-const std::string referenceImage("test/reference/csp-atmospheres-VistaAtmosphere-01.png");
-const std::string testImage("test/csp-atmospheres-VistaAtmosphere-01.png");
-const std::string differenceImage("test/csp-atmospheres-VistaAtmosphere-01-diff.png");
+TEST_CASE("[graphical] csp::atmospheres::VistaAtmosphere") {
 
-std::string exec(std::string const& cmd) {
-  std::array<char, 128>                    buffer;
-  std::string                              result;
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-  if (!pipe) {
-    throw std::runtime_error("popen() failed!");
-  }
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    result += buffer.data();
-  }
-  return result;
-}
+  const float PLANET_RADIUS(10.f);
 
-class FrameCapture : public VistaEventHandler {
+  // The TestImageCompare initializes a VistaSystem for us. Once it's doComparison method gets
+  // called, a single frame will be rendered, caputered with imagemagick and compared to a reference
+  // image (using imagemagick's compare tool).
+  cs::utils::TestImageCompare compare("csp-atmospheres-VistaAtmosphere-01", 1);
 
- public:
-  FrameCapture(int32_t atFrame)
-      : mAtFrame(atFrame) {
-  }
-
-  virtual void HandleEvent(VistaEvent* pEvent) {
-    if (pEvent->GetId() == VistaSystemEvent::VSE_POSTGRAPHICS) {
-      if (GetVistaSystem()->GetFrameLoop()->GetFrameCount() == mAtFrame) {
-        exec("import -window 'CosmoScout VR' " + testImage);
-      }
-    }
-  }
-
- private:
-  int32_t mAtFrame = 1;
-};
-
-bool renderImage() {
-
-  VistaSystem* pVistaSystem = new VistaSystem();
-  pVistaSystem->SetIniSearchPaths({"../share/config/vista"});
-
-  int          argc     = 5;
-  const char*  n_argv[] = {"", "-vistaini", "vista_test.ini", "-kill_after_frame", "1"};
-  const char** argv     = n_argv;
-
-  std::ostringstream vistaOutput;
-  vstr::SetOutStream(&vistaOutput);
-  vstr::SetWarnStream(&vistaOutput);
-  vstr::SetDebugStream(&vistaOutput);
-
-  if (!pVistaSystem->Init(argc, const_cast<char**>(argv))) {
-    return false;
-  }
-
-  pVistaSystem->GetGraphicsManager()->SetBackgroundColor(VistaColor(0, 0, 0));
-
-  FrameCapture capture(1);
-  pVistaSystem->GetEventManager()->AddEventHandler(
-      &capture, VistaSystemEvent::GetTypeId(), VistaSystemEvent::VSE_POSTGRAPHICS);
-
-  VistaSceneGraph*     pSG = pVistaSystem->GetGraphicsManager()->GetSceneGraph();
+  VistaSceneGraph*     pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
   VistaGeometryFactory oGeometryFactory(pSG);
 
-  // planet
+  // Create a "planet".
   VistaGeometry*      pPlanet          = oGeometryFactory.CreateSphere(1, 300, VistaColor::GRAY);
   VistaTransformNode* pPlanetTransform = pSG->NewTransformNode(pSG->GetRoot());
   pPlanetTransform->SetScale(PLANET_RADIUS, PLANET_RADIUS, PLANET_RADIUS);
   pPlanetTransform->Translate(0, 0, -2 * PLANET_RADIUS);
   pSG->NewGeomNode(pPlanetTransform, pPlanet);
 
-  // "mountains"
+  // Create some "mountains".
   VistaRandomNumberGenerator* pRnd = VistaRandomNumberGenerator::GetStandardRNG();
   pRnd->SetSeed(0);
 
@@ -118,27 +59,13 @@ bool renderImage() {
     pSG->NewGeomNode(pTransformNode, pMountain);
   }
 
-  // atmosphere
-  VistaAtmosphere* pAtmosphere = new VistaAtmosphere();
-  pAtmosphere->loadPreset(VistaAtmosphere::Preset::eMars);
+  // Create the atmosphere.
+  auto atmosphere = new VistaAtmosphere();
+  atmosphere->loadPreset(VistaAtmosphere::Preset::eMars);
+  pSG->NewOpenGLNode(pPlanetTransform, atmosphere);
 
-  pSG->NewOpenGLNode(pPlanetTransform, pAtmosphere);
-
-  pVistaSystem->Run();
-
-  delete pAtmosphere;
-  delete pVistaSystem;
-
-  return true;
-}
-
-TEST_CASE("[graphical] csp::atmospheres::VistaAtmosphere") {
-  CHECK_UNARY(renderImage());
-
-  std::string compareCommand =
-      "compare -metric PAE " + testImage + " " + referenceImage + " " + differenceImage + " 2>&1";
-  std::string result = exec(compareCommand);
-  CHECK(result == "0 (0)");
+  // Do the image comparision, allowing for a slight maximum per-pixel difference of 0.1%.
+  CHECK(compare.doComparison(0.1) == "0");
 }
 } // namespace csp::atmospheres
 
