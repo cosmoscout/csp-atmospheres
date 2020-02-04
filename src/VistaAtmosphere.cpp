@@ -526,17 +526,10 @@ void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
   // set uniforms ------------------------------------------------------------
   mAtmoShader->Bind();
 
-  double nearClip, farClip;
-  GetVistaSystem()
-      ->GetDisplayManager()
-      ->GetCurrentRenderInfo()
-      ->m_pViewport->GetProjection()
-      ->GetProjectionProperties()
-      ->GetClippingRange(nearClip, farClip);
-
   mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uSunDir"), mSunDirection[0],
       mSunDirection[1], mSunDirection[2]);
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uFarClip"), (float)farClip);
+  mAtmoShader->SetUniform(
+      mAtmoShader->GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
 
   mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uWaterLevel"), mWaterLevel);
   mAtmoShader->SetUniform(
