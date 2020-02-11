@@ -6,7 +6,8 @@ This is a default plugin of CosmoScout VR. Hence, any **issues should be reporte
 
 ## Configuration
 
-This plugin can be enabled with the following configuration in your `settings.json`:
+This plugin can be enabled with the following configuration in your `settings.json`.
+The given values represent values for Earth:
 
 ```javascript
 {
@@ -16,20 +17,20 @@ This plugin can be enabled with the following configuration in your `settings.js
     "csp-atmospheres": {
       "atmospheres": {
         <anchor name>: {
-          "atmosphereHeight": <float>,             // Relative to the planets radius.
-          "mieAnisotropy": <float>,
-          "mieHeight": <float>,
-          "mieScatteringB": <float>,
-          "mieScatteringG": <float>,
-          "mieScatteringR": <float>,
-          "rayleighAnisotropy": <float>,
-          "rayleighHeight": <float>,
-          "rayleighScatteringB": <float>,
-          "rayleighScatteringG": <float>,
-          "rayleighScatteringR": <float>,
-          "sunIntensity": <float>
-          "cloudHeight": <float>,                 // Optional Relative to the planets radius.
-          "cloudTexture": <path to cloud texture> // optional
+          "atmosphereHeight": 0.015,      // Relative atmosphere height compared to planet radius
+          "mieAnisotropy": 0.76,
+          "mieHeight": 0.000188679,
+          "mieScatteringB": 133.56,
+          "mieScatteringG": 133.56,
+          "mieScatteringR": 133.56,
+          "rayleighAnisotropy": 0,
+          "rayleighHeight": 0.001257862,
+          "rayleighScatteringB": 210.516,
+          "rayleighScatteringG": 85.86,
+          "rayleighScatteringR": 36.89,
+          "sunIntensity": 15,
+          "cloudHeight": 0.001,          // Relative cloud layer altitude
+          "cloudTexture": "../share/resources/textures/earth-clouds.jpg" // Optional
         },
         ... <more atmospheres> ...
       }
