@@ -29,6 +29,7 @@
 #include <VistaOGLExt/VistaTexture.h>
 #include <VistaOGLExt/VistaVertexArrayObject.h>
 #include <VistaTools/tinyXML/tinyxml.h>
+#include <spdlog/spdlog.h>
 
 namespace csp::atmospheres {
 
@@ -125,8 +126,7 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
   VistaXML::TiXmlDocument xDoc(sConfigFile);
 
   if (!xDoc.LoadFile()) {
-    std::cout << "Failed to load atmosphere config file " << sConfigFile << ": "
-              << "Cannont open file!" << std::endl;
+    spdlog::error("Failed to load atmosphere config: Cannot open file '{}'!", sConfigFile);
     return;
   }
 
@@ -135,7 +135,9 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
 
   // Read Data
   if (std::string(pRoot->Value()) != "AtmosphereConfig") {
-    std::cout << "Failed to read atmosphere config file " << sConfigFile << "!" << std::endl;
+    spdlog::error(
+        "Failed to read atmosphere config file '{}': There is no 'AtmosphereConfig' root element!",
+        sConfigFile);
     return;
   }
 
@@ -170,12 +172,12 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
       } else if (sName == "SunIntensity") {
         ssValue >> mSunIntensity;
       } else {
-        std::cout << "Ignoring invalid entity " << sName << " while reading star config file "
-                  << sConfigFile << "!" << std::endl;
+        spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!", sName,
+            sConfigFile);
       }
     } else {
-      std::cout << "Ignoring invalid entity " << pProperty->Value()
-                << " while reading star config file " << sConfigFile << "!" << std::endl;
+      spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!",
+          pProperty->Value(), sConfigFile);
     }
 
     pProperty = pProperty->NextSiblingElement();
