@@ -172,11 +172,11 @@ void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
       } else if (sName == "SunIntensity") {
         ssValue >> mSunIntensity;
       } else {
-        spdlog::warn("Ignoring invalid entity '{}' while reading star config file '{}'!", sName,
+        spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!", sName,
             sConfigFile);
       }
     } else {
-      spdlog::warn("Ignoring invalid entity '{}' while reading star config file '{}'!",
+      spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!",
           pProperty->Value(), sConfigFile);
     }
 
