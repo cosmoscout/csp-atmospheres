@@ -147,7 +147,13 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
       for(int x=-1; x<=1; x++){
           for(int y=-1; y<=1; y++){
               vec2 off = vec2(x,y)*size;
-              shadow += texture(uShadowMaps[cascade], coords - vec3(off, 0.00002));
+
+              // Dynamic array lookups are not supported in OpenGL 3.3
+              if      (cascade == 0) shadow += texture(uShadowMaps[0], coords - vec3(off, 0.00002));
+              else if (cascade == 1) shadow += texture(uShadowMaps[1], coords - vec3(off, 0.00002));
+              else if (cascade == 2) shadow += texture(uShadowMaps[2], coords - vec3(off, 0.00002));
+              else if (cascade == 3) shadow += texture(uShadowMaps[3], coords - vec3(off, 0.00002));
+              else                   shadow += texture(uShadowMaps[4], coords - vec3(off, 0.00002));
           }
       }
   

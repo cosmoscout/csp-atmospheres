@@ -12,6 +12,7 @@
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/TextureLoader.hpp"
+#include "../../../src/cs-utils/logger.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -70,18 +71,22 @@ void from_json(const nlohmann::json& j, Plugin::Settings& o) {
 
 Plugin::Plugin()
     : mProperties(std::make_shared<Properties>()) {
+
+  // Create default logger for this plugin.
+  spdlog::set_default_logger(cs::utils::logger::createLogger("csp-atmospheres"));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::init() {
-  std::cout << "Loading: CosmoScout VR Plugin Atmosphere" << std::endl;
+
+  spdlog::info("Loading plugin...");
 
   mPluginSettings = mAllSettings->mPlugins.at("csp-atmospheres");
 
   mGuiManager->addSettingsSectionToSideBarFromHTML(
       "Atmospheres", "blur_circular", "../share/resources/gui/atmospheres_settings.html");
-  mGuiManager->addScriptToSideBarFromJS("../share/resources/gui/js/atmospheres_settings.js");
+  mGuiManager->addScriptToGuiFromJS("../share/resources/gui/js/csp-atmospheres.js");
 
   for (auto const& atmoSettings : mPluginSettings.mAtmospheres) {
     auto anchor = mAllSettings->mAnchors.find(atmoSettings.first);
@@ -126,25 +131,25 @@ void Plugin::init() {
     mAtmospheres.push_back(atmosphere);
   }
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_water", ([this](bool enable) { mProperties->mEnableWater = enable; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_clouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_atmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<bool>(
+  mGuiManager->getGui()->registerCallback<bool>(
       "set_enable_light_shafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<double>(
+  mGuiManager->getGui()->registerCallback<double>(
       "set_atmosphere_quality", ([this](const int value) { mProperties->mQuality = value; }));
 
-  mGuiManager->getSideBar()->registerCallback<double>(
+  mGuiManager->getGui()->registerCallback<double>(
       "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
 
-  mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
+  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
         atmosphere->setShadowMap(mGraphicsEngine->getShadowMap());
@@ -154,8 +159,9 @@ void Plugin::init() {
     }
   });
 
-  mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
+  mEnableHDRConnection = mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
+      atmosphere->setUseToneMapping(!val, 0.6f, 2.2f);
       if (val) {
         atmosphere->setHDRBuffer(mGraphicsEngine->getHDRBuffer());
       } else {
@@ -163,6 +169,13 @@ void Plugin::init() {
       }
     }
   });
+
+  mAmbientBrightnessConnection =
+      mGraphicsEngine->pAmbientBrightness.onChange().connect([this](float val) {
+        for (auto const& atmosphere : mAtmospheres) {
+          atmosphere->setAmbientBrightness(val * 0.4f);
+        }
+      });
 
   mProperties->mEnableLightShafts.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
@@ -174,22 +187,14 @@ void Plugin::init() {
     }
   });
 
-  mGraphicsEngine->pAmbientBrightness.onChange().connect([this](float val) {
-    for (auto const& atmosphere : mAtmospheres) {
-      atmosphere->setAmbientBrightness(val * 0.4f);
-    }
-  });
-
-  mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
-    for (auto const& atmosphere : mAtmospheres) {
-      atmosphere->setUseToneMapping(!val, 0.6f, 2.2f);
-    }
-  });
+  spdlog::info("Loading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::deInit() {
+  spdlog::info("Unloading plugin...");
+
   for (auto const& atmosphere : mAtmospheres) {
     mSolarSystem->unregisterAnchor(atmosphere);
   }
@@ -198,12 +203,18 @@ void Plugin::deInit() {
     mSceneGraph->GetRoot()->DisconnectChild(atmosphereNode);
   }
 
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_water");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_clouds");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_atmosphere");
-  mGuiManager->getSideBar()->unregisterCallback("set_enable_light_shafts");
-  mGuiManager->getSideBar()->unregisterCallback("set_atmosphere_quality");
-  mGuiManager->getSideBar()->unregisterCallback("set_water_level");
+  mGuiManager->getGui()->unregisterCallback("set_enable_water");
+  mGuiManager->getGui()->unregisterCallback("set_enable_clouds");
+  mGuiManager->getGui()->unregisterCallback("set_enable_atmosphere");
+  mGuiManager->getGui()->unregisterCallback("set_enable_light_shafts");
+  mGuiManager->getGui()->unregisterCallback("set_atmosphere_quality");
+  mGuiManager->getGui()->unregisterCallback("set_water_level");
+
+  mGraphicsEngine->pEnableShadows.onChange().disconnect(mEnableShadowsConnection);
+  mGraphicsEngine->pEnableHDR.onChange().disconnect(mEnableHDRConnection);
+  mGraphicsEngine->pAmbientBrightness.onChange().disconnect(mAmbientBrightnessConnection);
+
+  spdlog::info("Unloading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
