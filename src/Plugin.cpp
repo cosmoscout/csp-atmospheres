@@ -137,22 +137,22 @@ void Plugin::init() {
   }
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_water", ([this](bool enable) { mProperties->mEnableWater = enable; }));
+      "setEnableWater", ([this](bool enable) { mProperties->mEnableWater = enable; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_clouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
+      "setEnableClouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_atmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
+      "setEnableAtmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_light_shafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+      "setEnableLightShafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
   mGuiManager->getGui()->registerCallback<double>(
-      "set_atmosphere_quality", ([this](const int value) { mProperties->mQuality = value; }));
+      "setAtmosphereQuality", ([this](const int value) { mProperties->mQuality = value; }));
 
   mGuiManager->getGui()->registerCallback<double>(
-      "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
+      "setWaterLevel", ([this](double value) { mProperties->mWaterLevel = value; }));
 
   spdlog::info("Loading done.");
 }
@@ -170,12 +170,12 @@ void Plugin::deInit() {
     mSceneGraph->GetRoot()->DisconnectChild(atmosphereNode);
   }
 
-  mGuiManager->getGui()->unregisterCallback("set_enable_water");
-  mGuiManager->getGui()->unregisterCallback("set_enable_clouds");
-  mGuiManager->getGui()->unregisterCallback("set_enable_atmosphere");
-  mGuiManager->getGui()->unregisterCallback("set_enable_light_shafts");
-  mGuiManager->getGui()->unregisterCallback("set_atmosphere_quality");
-  mGuiManager->getGui()->unregisterCallback("set_water_level");
+  mGuiManager->getGui()->unregisterCallback("setEnableWater");
+  mGuiManager->getGui()->unregisterCallback("setEnableClouds");
+  mGuiManager->getGui()->unregisterCallback("setEnableAtmosphere");
+  mGuiManager->getGui()->unregisterCallback("setEnableLightShafts");
+  mGuiManager->getGui()->unregisterCallback("setAtmosphereQuality");
+  mGuiManager->getGui()->unregisterCallback("setWaterLevel");
 
   spdlog::info("Unloading done.");
 }
