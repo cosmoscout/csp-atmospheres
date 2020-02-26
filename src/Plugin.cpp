@@ -137,22 +137,22 @@ void Plugin::init() {
   }
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "setEnableWater", ([this](bool enable) { mProperties->mEnableWater = enable; }));
+      "atmosphere.setEnableWater", ([this](bool enable) { mProperties->mEnableWater = enable; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "setEnableClouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
+      "atmosphere.setEnableClouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "setEnableAtmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
+      "atmosphere.setEnable", ([this](bool value) { mProperties->mEnabled = value; }));
 
   mGuiManager->getGui()->registerCallback<bool>(
-      "setEnableLightShafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+      "atmosphere.setEnableLightShafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
   mGuiManager->getGui()->registerCallback<double>(
-      "setAtmosphereQuality", ([this](const int value) { mProperties->mQuality = value; }));
+      "atmosphere.setQuality", ([this](const int value) { mProperties->mQuality = value; }));
 
   mGuiManager->getGui()->registerCallback<double>(
-      "setWaterLevel", ([this](double value) { mProperties->mWaterLevel = value; }));
+      "atmosphere.setWaterLevel", ([this](double value) { mProperties->mWaterLevel = value; }));
 
   spdlog::info("Loading done.");
 }
@@ -170,12 +170,12 @@ void Plugin::deInit() {
     mSceneGraph->GetRoot()->DisconnectChild(atmosphereNode);
   }
 
-  mGuiManager->getGui()->unregisterCallback("setEnableWater");
-  mGuiManager->getGui()->unregisterCallback("setEnableClouds");
-  mGuiManager->getGui()->unregisterCallback("setEnableAtmosphere");
-  mGuiManager->getGui()->unregisterCallback("setEnableLightShafts");
-  mGuiManager->getGui()->unregisterCallback("setAtmosphereQuality");
-  mGuiManager->getGui()->unregisterCallback("setWaterLevel");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableWater");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableClouds");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnable");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableLightShafts");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setQuality");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setWaterLevel");
 
   spdlog::info("Unloading done.");
 }

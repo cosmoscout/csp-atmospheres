@@ -13,8 +13,8 @@ class AtmosphereApi extends IApi {
    * @inheritDoc
    */
   init() {
-    CosmoScout.gui.initSlider('setAtmosphereQuality', 1, 30, 1, [7]);
-    CosmoScout.gui.initSlider('setWaterLevel', -2, 2, 0.01, [0]);
+    CosmoScout.gui.initSlider("atmosphere.setQuality", 1, 30, 1, [7]);
+    CosmoScout.gui.initSlider("atmosphere.setWaterLevel", -2, 2, 0.01, [0]);
   }
 }
 
