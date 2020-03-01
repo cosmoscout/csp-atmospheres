@@ -145,8 +145,8 @@ void Plugin::init() {
   mGuiManager->getGui()->registerCallback<bool>(
       "atmosphere.setEnable", ([this](bool value) { mProperties->mEnabled = value; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "atmosphere.setEnableLightShafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+  mGuiManager->getGui()->registerCallback<bool>("atmosphere.setEnableLightShafts",
+      ([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
   mGuiManager->getGui()->registerCallback<double>(
       "atmosphere.setQuality", ([this](const int value) { mProperties->mQuality = value; }));
