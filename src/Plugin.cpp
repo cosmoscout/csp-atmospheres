@@ -136,23 +136,23 @@ void Plugin::init() {
     mAtmospheres.push_back(atmosphere);
   }
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "atmosphere.setEnableWater", ([this](bool enable) { mProperties->mEnableWater = enable; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
+      std::function([this](bool enable) { mProperties->mEnableWater = enable; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "atmosphere.setEnableClouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableClouds",
+      std::function([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "atmosphere.setEnable", ([this](bool value) { mProperties->mEnabled = value; }));
+  mGuiManager->getGui()->registerCallback(
+      "atmosphere.setEnable", std::function([this](bool value) { mProperties->mEnabled = value; }));
 
-  mGuiManager->getGui()->registerCallback<bool>("atmosphere.setEnableLightShafts",
-      ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableLightShafts",
+      std::function([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
-  mGuiManager->getGui()->registerCallback<double>(
-      "atmosphere.setQuality", ([this](const int value) { mProperties->mQuality = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
+      std::function([this](const int value) { mProperties->mQuality = value; }));
 
-  mGuiManager->getGui()->registerCallback<double>(
-      "atmosphere.setWaterLevel", ([this](double value) { mProperties->mWaterLevel = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
+      std::function([this](double value) { mProperties->mWaterLevel = value; }));
 
   spdlog::info("Loading done.");
 }
