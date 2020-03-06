@@ -137,21 +137,28 @@ void Plugin::init() {
   }
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
+      "Enables or disables rendering of a water surface.",
       std::function([this](bool enable) { mProperties->mEnableWater = enable; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableClouds",
+      "Enables or disables rendering of a cloud layer.",
       std::function([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
-  mGuiManager->getGui()->registerCallback(
-      "atmosphere.setEnable", std::function([this](bool value) { mProperties->mEnabled = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnable",
+      "Enables or disables rendering of atmospheres.",
+      std::function([this](bool value) { mProperties->mEnabled = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableLightShafts",
+      "If shadows are enabled, this enables or disables rendering of light shafts in the "
+      "atmosphere.",
       std::function([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
+      "Higher values create a more realistic atmosphere.",
       std::function([this](const int value) { mProperties->mQuality = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
+      "Sets the height of the water surface relative to the planet's radius.",
       std::function([this](double value) { mProperties->mWaterLevel = value; }));
 
   spdlog::info("Loading done.");
