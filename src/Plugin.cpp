@@ -155,7 +155,7 @@ void Plugin::init() {
 
   mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
       "Higher values create a more realistic atmosphere.",
-      std::function([this](const int value) { mProperties->mQuality = value; }));
+      std::function([this](double value) { mProperties->mQuality = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
       "Sets the height of the water surface relative to the planet's radius.",
