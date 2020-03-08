@@ -131,23 +131,30 @@ void Plugin::init() {
     mAtmospheres.push_back(atmosphere);
   }
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_water", ([this](bool enable) { mProperties->mEnableWater = enable; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
+      "Enables or disables rendering of a water surface.",
+      std::function([this](bool enable) { mProperties->mEnableWater = enable; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_clouds", ([this](bool enable) { mProperties->mEnableClouds = enable; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableClouds",
+      "Enables or disables rendering of a cloud layer.",
+      std::function([this](bool enable) { mProperties->mEnableClouds = enable; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_atmosphere", ([this](bool value) { mProperties->mEnabled = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnable",
+      "Enables or disables rendering of atmospheres.",
+      std::function([this](bool value) { mProperties->mEnabled = value; }));
 
-  mGuiManager->getGui()->registerCallback<bool>(
-      "set_enable_light_shafts", ([this](bool value) { mProperties->mEnableLightShafts = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setEnableLightShafts",
+      "If shadows are enabled, this enables or disables rendering of light shafts in the "
+      "atmosphere.",
+      std::function([this](bool value) { mProperties->mEnableLightShafts = value; }));
 
-  mGuiManager->getGui()->registerCallback<double>(
-      "set_atmosphere_quality", ([this](const int value) { mProperties->mQuality = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
+      "Higher values create a more realistic atmosphere.",
+      std::function([this](double value) { mProperties->mQuality = value; }));
 
-  mGuiManager->getGui()->registerCallback<double>(
-      "set_water_level", ([this](double value) { mProperties->mWaterLevel = value; }));
+  mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
+      "Sets the height of the water surface relative to the planet's radius.",
+      std::function([this](double value) { mProperties->mWaterLevel = value; }));
 
   mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
@@ -203,12 +210,12 @@ void Plugin::deInit() {
     mSceneGraph->GetRoot()->DisconnectChild(atmosphereNode);
   }
 
-  mGuiManager->getGui()->unregisterCallback("set_enable_water");
-  mGuiManager->getGui()->unregisterCallback("set_enable_clouds");
-  mGuiManager->getGui()->unregisterCallback("set_enable_atmosphere");
-  mGuiManager->getGui()->unregisterCallback("set_enable_light_shafts");
-  mGuiManager->getGui()->unregisterCallback("set_atmosphere_quality");
-  mGuiManager->getGui()->unregisterCallback("set_water_level");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableWater");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableClouds");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnable");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableLightShafts");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setQuality");
+  mGuiManager->getGui()->unregisterCallback("atmosphere.setWaterLevel");
 
   mGraphicsEngine->pEnableShadows.onChange().disconnect(mEnableShadowsConnection);
   mGraphicsEngine->pEnableHDR.onChange().disconnect(mEnableHDRConnection);
