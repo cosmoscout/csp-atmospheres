@@ -109,7 +109,8 @@ void Atmosphere::setShadowMap(std::shared_ptr<cs::graphics::ShadowMap> const& pS
 
 void Atmosphere::setHDRBuffer(std::shared_ptr<cs::graphics::HDRBuffer> const& pHDRBuffer) {
   if (mHDRBuffer != pHDRBuffer) {
-    mHDRBuffer = pHDRBuffer;
+    mHDRBuffer   = pHDRBuffer;
+    mShaderDirty = true;
   }
 }
 
@@ -284,6 +285,7 @@ void Atmosphere::updateShader() {
   cs::utils::replaceString(sFrag, "DRAW_WATER", mDrawWater ? "1" : "0");
   cs::utils::replaceString(sFrag, "USE_SHADOWMAP", (mShadowMap != nullptr) ? "1" : "0");
   cs::utils::replaceString(sFrag, "USE_CLOUDMAP", (mUseClouds && mCloudTexture) ? "1" : "0");
+  cs::utils::replaceString(sFrag, "ENABLE_HDR", mHDRBuffer ? "1" : "0");
 
   mAtmoShader->InitVertexShaderFromString(sVert);
   mAtmoShader->InitFragmentShaderFromString(sFrag);

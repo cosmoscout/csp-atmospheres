@@ -656,9 +656,14 @@ const std::string Atmosphere::cAtmosphereFrag1 = R"(
         oColor *= GetExtinction(vsIn.vRayOrigin, vRayDir, vStartEnd.x, vStartEnd.y);
         oColor += GetInscatter(vsIn.vRayOrigin, vRayDir, vStartEnd.x, vStartEnd.y, bHitsSurface, uSunDir);
 
+        // add clouds themselves
         #if USE_CLOUDMAP
-          // add clouds themselves
-          oColor += cloudColor.rgb * (1 - uAmbientBrightness) * 0.08;
+          #if ENABLE_HDR
+            oColor += cloudColor.rgb * (1 - uAmbientBrightness);
+          #else
+            // For non-hdr rendering, the clouds need to be darkend a little.
+            oColor += cloudColor.rgb * (1 - uAmbientBrightness) * 0.1;
+          #endif
         #endif
       }
 
