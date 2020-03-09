@@ -8,7 +8,7 @@
 
 namespace csp::atmospheres {
 
-const std::string Atmosphere::cAtmosphereVert = R"(
+const std::string AtmosphereRenderer::cAtmosphereVert = R"(
   #version 330
 
   // inputs
@@ -52,7 +52,7 @@ const std::string Atmosphere::cAtmosphereVert = R"(
 )";
 
 // needs to be splitted because MSVC doesn't like long strings
-const std::string Atmosphere::cAtmosphereFrag0 = R"(
+const std::string AtmosphereRenderer::cAtmosphereFrag0 = R"(
   #version 400
   // version 400 is required here for the dynamic index in uShadowMaps
 
@@ -69,7 +69,6 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
   // ===========================================================================
   uniform sampler2D uDepthBuffer;
   uniform sampler2D uColorBuffer;
-  uniform sampler2D uTransmittanceTexture;
   uniform sampler2D uCloudTexture;
   uniform mat4      uMatInvMVP;
   uniform mat4      uMatInvMV;
@@ -300,12 +299,22 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
     return result;
   }
 
+  float SRGBtoLINEAR(float srgbIn)
+  {
+    float bLess = step(0.04045, srgbIn);
+    return mix( srgbIn/12.92, pow((srgbIn+0.055)/1.055, 2.4), bLess);
+  }
+
   float SampleCloudDensity(vec3 vPosition)
   {
     vec2 lngLat = GetLngLat(vPosition);
     vec2 texCoords = vec2(lngLat.x / (2*PI) + 0.5, 1.0 - lngLat.y / PI + 0.5);
 
-    return texture(uCloudTexture, texCoords).r;
+    #if ENABLE_HDR
+      return SRGBtoLINEAR(texture(uCloudTexture, texCoords).r);
+    #else
+      return texture(uCloudTexture, texCoords).r;
+    #endif
   }
 
   vec4 SampleCloudColor(vec3 vRayOrigin, vec3 vRayDir, vec3 vSunDir, float fTIntersection)
@@ -404,7 +413,7 @@ const std::string Atmosphere::cAtmosphereFrag0 = R"(
   )";
 
 // needs to be splitted because MSVC doesn't like long strings
-const std::string Atmosphere::cAtmosphereFrag1 = R"(
+const std::string AtmosphereRenderer::cAtmosphereFrag1 = R"(
 
   // returns the color of the incoming light for any direction and position
   // ===========================================================================

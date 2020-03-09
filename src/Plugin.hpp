@@ -61,7 +61,6 @@ class Plugin : public cs::core::PluginBase {
  private:
   Settings                                 mPluginSettings;
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
-  std::vector<VistaOpenGLNode*>            mAtmosphereNodes;
   std::shared_ptr<Properties>              mProperties;
 
   int mEnableShadowsConnection     = -1;
