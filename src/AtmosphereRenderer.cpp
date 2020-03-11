@@ -416,7 +416,8 @@ bool AtmosphereRenderer::Do() {
   glm::mat4 matInvP = glm::inverse(glm::make_mat4x4(glMatP));
   glm::mat4 matInvMVP(matInvMV * matInvP);
 
-  glm::vec3 sunDir = glm::normalize(glm::vec3(matInvMV * glm::vec4(mSunDirection, 0)));
+  glm::vec3 sunDir =
+      glm::normalize(glm::vec3(glm::inverse(mWorldTransform) * glm::vec4(mSunDirection, 0)));
 
   // set uniforms ------------------------------------------------------------
   mAtmoShader->Bind();
