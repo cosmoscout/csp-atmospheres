@@ -509,7 +509,14 @@ const std::string AtmosphereRenderer::cAtmosphereFrag1 = R"(
 
     vec3 surface = vRayOrigin + vRayDir * vStartEnd.x;
     vec3 normal = normalize(surface);
-    float specular = pow(max(dot(vRayDir, reflect(uSunDir, normal)), 0.0), 30)*0.5;
+    float specular = pow(max(dot(vRayDir, reflect(uSunDir, normal)), 0.0), 10)*0.2;
+    specular += pow(max(dot(vRayDir, reflect(uSunDir, normal)), 0.0), 50)*0.2;
+    specular *= uSunIntensity;
+
+    #if !ENABLE_HDR
+      // For non-hdr rendering, the specular needs to be darkend a little.
+      specular *= 0.3;
+    #endif
 
     float depth = clamp((vStartEnd.y - vStartEnd.x)*1000, 0.0, 1.0);
     vec4 water = GetWaterShade(depth);
