@@ -28,7 +28,7 @@ class Atmosphere : public cs::scene::CelestialObject {
   AtmosphereRenderer const& getRenderer() const;
 
   /// This is called once a frame by the solar system. It updates the atmosphere's position based on
-  /// the SPICE kernels for the center and frmae specified at construction time.
+  /// the SPICE kernels for the center and frame specified at construction time.
   void update(double time, cs::scene::CelestialObserver const& oObs) override;
 
  private:
