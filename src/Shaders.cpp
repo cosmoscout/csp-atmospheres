@@ -53,8 +53,7 @@ const std::string AtmosphereRenderer::cAtmosphereVert = R"(
 
 // needs to be splitted because MSVC doesn't like long strings
 const std::string AtmosphereRenderer::cAtmosphereFrag0 = R"(
-  #version 400
-  // version 400 is required here for the dynamic index in uShadowMaps
+  #version 330
 
   // inputs
   // ===========================================================================
