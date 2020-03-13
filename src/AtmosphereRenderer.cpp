@@ -4,23 +4,26 @@
 //                        Copyright: (c) 2019 German Aerospace Center (DLR)                       //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "VistaAtmosphere.hpp"
+#include "Atmosphere.hpp"
 
 #ifdef _WIN32
 #define NOMINMAX
 #include <Windows.h>
 #endif
 
+#include "../../../src/cs-core/GraphicsEngine.hpp"
+#include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/Shadows.hpp"
+#include "../../../src/cs-utils/FrameTimings.hpp"
 #include "../../../src/cs-utils/utils.hpp"
 
 #include <VistaKernel/DisplayManager/VistaDisplayManager.h>
 #include <VistaKernel/DisplayManager/VistaProjection.h>
 #include <VistaKernel/DisplayManager/VistaViewport.h>
 #include <VistaKernel/GraphicsManager/VistaGeometryFactory.h>
-#include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
 #include <VistaKernel/VistaSystem.h>
+#include <VistaMath/VistaBoundingBox.h>
 #include <VistaOGLExt/Rendering/VistaGeometryData.h>
 #include <VistaOGLExt/Rendering/VistaGeometryRenderingCore.h>
 #include <VistaOGLExt/VistaBufferObject.h>
@@ -29,36 +32,37 @@
 #include <VistaOGLExt/VistaTexture.h>
 #include <VistaOGLExt/VistaVertexArrayObject.h>
 #include <VistaTools/tinyXML/tinyxml.h>
-#include <spdlog/spdlog.h>
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace csp::atmospheres {
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-VistaAtmosphere::VistaAtmosphere(Preset ePreset)
-    : mTransmittanceTexture(new VistaTexture(GL_TEXTURE_2D))
+AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties)
+    : mProperties(pProperties)
     , mAtmoShader(new VistaGLSLShader())
     , mQuadVAO(new VistaVertexArrayObject())
     , mQuadVBO(new VistaBufferObject()) {
+
   initData();
-  loadPreset(ePreset);
+
+  // scene-wide settings -----------------------------------------------------
+  mProperties->mQuality.onChange().connect([this](int val) { setPrimaryRaySteps(val); });
+
+  mProperties->mEnableWater.onChange().connect([this](bool val) { setDrawWater(val); });
+
+  mProperties->mEnableClouds.onChange().connect([this](bool val) {
+    if (mUseClouds != val) {
+      mShaderDirty = true;
+      mUseClouds   = val;
+    }
+  });
+
+  mProperties->mWaterLevel.onChange().connect([this](float val) { setWaterLevel(val / 1000); });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-VistaAtmosphere::VistaAtmosphere(const std::string& sConfigFile)
-    : mTransmittanceTexture(new VistaTexture(GL_TEXTURE_2D))
-    , mAtmoShader(new VistaGLSLShader())
-    , mQuadVAO(new VistaVertexArrayObject())
-    , mQuadVBO(new VistaBufferObject()) {
-  initData();
-  loadConfigFile(sConfigFile);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-VistaAtmosphere::~VistaAtmosphere() {
-  delete mTransmittanceTexture;
+AtmosphereRenderer::~AtmosphereRenderer() {
   delete mAtmoShader;
   delete mQuadVAO;
   delete mQuadVBO;
@@ -71,124 +75,38 @@ VistaAtmosphere::~VistaAtmosphere() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::loadPreset(Preset ePreset) {
-  if (ePreset == Preset::eEarth) {
-    mAtmosphereHeight = 80.0 / 6360.0;
-    mMieHeight        = 1.2 / 6360.0;
-    mMieScattering =
-        VistaVector3D(21.0e-6f * 6360000.f, 21.0e-6f * 6360000.f, 21.0e-6f * 6360000.f);
-    mMieAnisotropy  = 0.76;
-    mRayleighHeight = 8.0 / 6360.0;
-    mRayleighScattering =
-        VistaVector3D(5.8e-6f * 6360000.f, 13.5e-6f * 6360000.f, 33.1e-6f * 6360000.f);
-    mRayleighAnisotropy = 0;
-    mSunIntensity       = 15;
-  } else if (ePreset == Preset::eMars) {
-    mAtmosphereHeight = 70.0 / 3460.0;
-    mMieHeight        = 5.0 / 3460.0;
-    mMieScattering =
-        VistaVector3D(21.0e-6f * 3460000.f, 21.0e-6f * 3460000.f, 21.0e-6f * 3460000.f);
-    mMieAnisotropy  = 0.76;
-    mRayleighHeight = 11.0 / 3460.0;
-    mRayleighScattering =
-        VistaVector3D(20.0e-6f * 3460000.f, 13.5e-6f * 3460000.f, 5.75e-6f * 3460000.f);
-    mRayleighAnisotropy = 0;
-    mSunIntensity       = 15;
-  } else if (ePreset == Preset::eSmog) {
-    mAtmosphereHeight   = 70.0 / 2000.0;
-    mMieHeight          = 10.0 / 2000.0;
-    mMieScattering      = VistaVector3D(100.0, 100.0, 100.0);
-    mMieAnisotropy      = 0.76;
-    mRayleighHeight     = 15.0 / 2000.0;
-    mRayleighScattering = VistaVector3D(5.8, 18.5, 33.1);
-    mRayleighAnisotropy = 0;
-    mSunIntensity       = 15;
-  } else // if (ePreset == Preset::eBlue_paradise)
-  {
-    mAtmosphereHeight   = 0.05;
-    mMieHeight          = 0.0005;
-    mMieScattering      = VistaVector3D(10.0, 10.0, 10.0);
-    mMieAnisotropy      = 0.7;
-    mRayleighHeight     = 0.01;
-    mRayleighScattering = VistaVector3D(5.8, 18.5, 33.1);
-    mRayleighAnisotropy = 0;
-    mSunIntensity       = 15;
-  }
-
-  mShaderDirty = true;
+void AtmosphereRenderer::setSun(glm::vec3 const& direction, float illuminance) {
+  mSunIntensity = illuminance;
+  mSunDirection = direction;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::loadConfigFile(const std::string& sConfigFile) {
-  loadPreset(Preset::eEarth);
-
-  VistaXML::TiXmlDocument xDoc(sConfigFile);
-
-  if (!xDoc.LoadFile()) {
-    spdlog::error("Failed to load atmosphere config: Cannot open file '{}'!", sConfigFile);
-    return;
-  }
-
-  // Get First Element
-  const VistaXML::TiXmlElement* pRoot(xDoc.FirstChildElement());
-
-  // Read Data
-  if (std::string(pRoot->Value()) != "AtmosphereConfig") {
-    spdlog::error(
-        "Failed to read atmosphere config file '{}': There is no 'AtmosphereConfig' root element!",
-        sConfigFile);
-    return;
-  }
-
-  const VistaXML::TiXmlElement* pProperty(pRoot->FirstChildElement());
-
-  while (pProperty != nullptr) {
-    if (std::string(pProperty->Value()) == "Property") {
-      std::string       sName(pProperty->Attribute("Name"));
-      std::stringstream ssValue(pProperty->Attribute("Value"));
-      if (sName == "AtmosphereHeight") {
-        ssValue >> mAtmosphereHeight;
-      } else if (sName == "MieHeight") {
-        ssValue >> mMieHeight;
-      } else if (sName == "MieScatteringR") {
-        ssValue >> mMieScattering[0];
-      } else if (sName == "MieScatteringG") {
-        ssValue >> mMieScattering[1];
-      } else if (sName == "MieScatteringB") {
-        ssValue >> mMieScattering[2];
-      } else if (sName == "MieAnisotropy") {
-        ssValue >> mMieAnisotropy;
-      } else if (sName == "RayleighHeight") {
-        ssValue >> mRayleighHeight;
-      } else if (sName == "RayleighScatteringR") {
-        ssValue >> mRayleighScattering[0];
-      } else if (sName == "RayleighScatteringG") {
-        ssValue >> mRayleighScattering[1];
-      } else if (sName == "RayleighScatteringB") {
-        ssValue >> mRayleighScattering[2];
-      } else if (sName == "RayleighAnisotropy") {
-        ssValue >> mRayleighAnisotropy;
-      } else if (sName == "SunIntensity") {
-        ssValue >> mSunIntensity;
-      } else {
-        spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!",
-            sName, sConfigFile);
-      }
-    } else {
-      spdlog::warn("Ignoring invalid entity '{}' while reading atmosphere config file '{}'!",
-          pProperty->Value(), sConfigFile);
-    }
-
-    pProperty = pProperty->NextSiblingElement();
-  }
-
-  mShaderDirty = true;
+void AtmosphereRenderer::setRadii(glm::dvec3 const& radii) {
+  mRadii = radii;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setShadowMap(cs::graphics::ShadowMap const* pShadowMap) {
+void AtmosphereRenderer::setWorldTransform(glm::dmat4 const& transform) {
+  mWorldTransform = transform;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void AtmosphereRenderer::setCloudTexture(
+    std::shared_ptr<VistaTexture> const& texture, float height) {
+  if (mCloudTexture != texture || mCloudHeight != height) {
+    mCloudTexture = texture;
+    mCloudHeight  = height;
+    mShaderDirty  = true;
+    mUseClouds    = texture != nullptr;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void AtmosphereRenderer::setShadowMap(std::shared_ptr<cs::graphics::ShadowMap> const& pShadowMap) {
   if (mShadowMap != pShadowMap) {
     mShadowMap   = pShadowMap;
     mShaderDirty = true;
@@ -197,221 +115,195 @@ void VistaAtmosphere::setShadowMap(cs::graphics::ShadowMap const* pShadowMap) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setCloudTexture(VistaTexture* pTexture, float fAltitude) {
-  if (mCloudTexture != pTexture) {
-    mCloudTexture  = pTexture;
-    mCloudAltitude = fAltitude;
-    mShaderDirty   = true;
+void AtmosphereRenderer::setHDRBuffer(std::shared_ptr<cs::graphics::HDRBuffer> const& pHDRBuffer) {
+  if (mHDRBuffer != pHDRBuffer) {
+    mHDRBuffer   = pHDRBuffer;
+    mShaderDirty = true;
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float VistaAtmosphere::getApproximateSceneBrightness() const {
+float AtmosphereRenderer::getApproximateSceneBrightness() const {
   return mApproximateBrightness;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int VistaAtmosphere::getPrimaryRaySteps() const {
+int AtmosphereRenderer::getPrimaryRaySteps() const {
   return mPrimaryRaySteps;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setPrimaryRaySteps(int iValue) {
+void AtmosphereRenderer::setPrimaryRaySteps(int iValue) {
   mPrimaryRaySteps = iValue;
   mShaderDirty     = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int VistaAtmosphere::getSecondaryRaySteps() const {
+int AtmosphereRenderer::getSecondaryRaySteps() const {
   return mSecondaryRaySteps;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setSecondaryRaySteps(int iValue) {
+void AtmosphereRenderer::setSecondaryRaySteps(int iValue) {
   mSecondaryRaySteps = iValue;
   mShaderDirty       = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-VistaVector3D VistaAtmosphere::getSunDirection() const {
-  return mSunDirection;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void VistaAtmosphere::setSunDirection(const VistaVector3D& vValue) {
-  mSunDirection = VistaVector3D(vValue[0], vValue[1], vValue[2], 0);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double VistaAtmosphere::getAtmosphereHeight() const {
+double AtmosphereRenderer::getAtmosphereHeight() const {
   return mAtmosphereHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setAtmosphereHeight(double dValue) {
+void AtmosphereRenderer::setAtmosphereHeight(double dValue) {
   mAtmosphereHeight = dValue;
   mShaderDirty      = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float VistaAtmosphere::getSunIntensity() const {
-  return mSunIntensity;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void VistaAtmosphere::setSunIntensity(float fValue) {
-  mSunIntensity = fValue;
-  mShaderDirty  = true;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double VistaAtmosphere::getMieHeight() const {
+double AtmosphereRenderer::getMieHeight() const {
   return mMieHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setMieHeight(double dValue) {
+void AtmosphereRenderer::setMieHeight(double dValue) {
   mMieHeight   = dValue;
   mShaderDirty = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-VistaVector3D VistaAtmosphere::getMieScattering() const {
+glm::vec3 AtmosphereRenderer::getMieScattering() const {
   return mMieScattering;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setMieScattering(const VistaVector3D& vValue) {
+void AtmosphereRenderer::setMieScattering(const glm::vec3& vValue) {
   mMieScattering = vValue;
   mShaderDirty   = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double VistaAtmosphere::getMieAnisotropy() const {
+double AtmosphereRenderer::getMieAnisotropy() const {
   return mMieAnisotropy;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setMieAnisotropy(double dValue) {
+void AtmosphereRenderer::setMieAnisotropy(double dValue) {
   mMieAnisotropy = dValue;
   mShaderDirty   = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double VistaAtmosphere::getRayleighHeight() const {
+double AtmosphereRenderer::getRayleighHeight() const {
   return mRayleighHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setRayleighHeight(double dValue) {
+void AtmosphereRenderer::setRayleighHeight(double dValue) {
   mRayleighHeight = dValue;
   mShaderDirty    = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-VistaVector3D VistaAtmosphere::getRayleighScattering() const {
+glm::vec3 AtmosphereRenderer::getRayleighScattering() const {
   return mRayleighScattering;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setRayleighScattering(const VistaVector3D& vValue) {
+void AtmosphereRenderer::setRayleighScattering(const glm::vec3& vValue) {
   mRayleighScattering = vValue;
   mShaderDirty        = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double VistaAtmosphere::getRayleighAnisotropy() const {
+double AtmosphereRenderer::getRayleighAnisotropy() const {
   return mRayleighAnisotropy;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setRayleighAnisotropy(double dValue) {
+void AtmosphereRenderer::setRayleighAnisotropy(double dValue) {
   mRayleighAnisotropy = dValue;
   mShaderDirty        = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool VistaAtmosphere::getDrawSun() const {
+bool AtmosphereRenderer::getDrawSun() const {
   return mDrawSun;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setDrawSun(bool bEnable) {
+void AtmosphereRenderer::setDrawSun(bool bEnable) {
   mDrawSun     = bEnable;
   mShaderDirty = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool VistaAtmosphere::getDrawWater() const {
+bool AtmosphereRenderer::getDrawWater() const {
   return mDrawWater;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setDrawWater(bool bEnable) {
+void AtmosphereRenderer::setDrawWater(bool bEnable) {
   mDrawWater   = bEnable;
   mShaderDirty = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float VistaAtmosphere::getWaterLevel() const {
+float AtmosphereRenderer::getWaterLevel() const {
   return mWaterLevel;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setWaterLevel(float fValue) {
+void AtmosphereRenderer::setWaterLevel(float fValue) {
   mWaterLevel = fValue;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float VistaAtmosphere::getAmbientBrightness() const {
+float AtmosphereRenderer::getAmbientBrightness() const {
   return mAmbientBrightness;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setAmbientBrightness(float fValue) {
+void AtmosphereRenderer::setAmbientBrightness(float fValue) {
   mAmbientBrightness = fValue;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool VistaAtmosphere::getUseToneMapping() const {
+bool AtmosphereRenderer::getUseToneMapping() const {
   return mUseToneMapping;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setUseToneMapping(bool bEnable, float fExposure, float fGamma) {
+void AtmosphereRenderer::setUseToneMapping(bool bEnable, float fExposure, float fGamma) {
   mUseToneMapping = bEnable;
   mExposure       = fExposure;
   mGamma          = fGamma;
@@ -420,20 +312,20 @@ void VistaAtmosphere::setUseToneMapping(bool bEnable, float fExposure, float fGa
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool VistaAtmosphere::getUseLinearDepthBuffer() const {
+bool AtmosphereRenderer::getUseLinearDepthBuffer() const {
   return mUseLinearDepthBuffer;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::setUseLinearDepthBuffer(bool bEnable) {
+void AtmosphereRenderer::setUseLinearDepthBuffer(bool bEnable) {
   mUseLinearDepthBuffer = bEnable;
   mShaderDirty          = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::updateShader() {
+void AtmosphereRenderer::updateShader() {
   if (mAtmoShader) {
     delete mAtmoShader;
   }
@@ -444,7 +336,6 @@ void VistaAtmosphere::updateShader() {
   std::string sFrag(cAtmosphereFrag0 + cAtmosphereFrag1);
 
   cs::utils::replaceString(sFrag, "HEIGHT_ATMO", cs::utils::toString(mAtmosphereHeight));
-  cs::utils::replaceString(sFrag, "SUN_INTENSITY", cs::utils::toString(mSunIntensity));
   cs::utils::replaceString(sFrag, "ANISOTROPY_R", cs::utils::toString(mRayleighAnisotropy));
   cs::utils::replaceString(sFrag, "ANISOTROPY_M", cs::utils::toString(mMieAnisotropy));
   cs::utils::replaceString(sFrag, "HEIGHT_R", cs::utils::toString(mRayleighHeight));
@@ -465,7 +356,8 @@ void VistaAtmosphere::updateShader() {
   cs::utils::replaceString(sFrag, "DRAW_SUN", mDrawSun ? "1" : "0");
   cs::utils::replaceString(sFrag, "DRAW_WATER", mDrawWater ? "1" : "0");
   cs::utils::replaceString(sFrag, "USE_SHADOWMAP", (mShadowMap != nullptr) ? "1" : "0");
-  cs::utils::replaceString(sFrag, "USE_CLOUDMAP", (mCloudTexture != nullptr) ? "1" : "0");
+  cs::utils::replaceString(sFrag, "USE_CLOUDMAP", (mUseClouds && mCloudTexture) ? "1" : "0");
+  cs::utils::replaceString(sFrag, "ENABLE_HDR", mHDRBuffer ? "1" : "0");
 
   mAtmoShader->InitVertexShaderFromString(sVert);
   mAtmoShader->InitFragmentShaderFromString(sFrag);
@@ -475,15 +367,12 @@ void VistaAtmosphere::updateShader() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
+bool AtmosphereRenderer::Do() {
+  cs::utils::FrameTimings::ScopedTimer timer("csp-atmospheres");
+
   if (mShaderDirty) {
     updateShader();
     mShaderDirty = false;
-  }
-
-  if (mTransmittanceTextureDirty) {
-    updateTransmittanceTexture();
-    mTransmittanceTextureDirty = false;
   }
 
   // save current lighting and meterial state of the OpenGL state machine ----
@@ -497,58 +386,78 @@ void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
   glDepthMask(GL_FALSE);
 
   // copy depth buffer -------------------------------------------------------
-  GLint iViewport[4];
-  glGetIntegerv(GL_VIEWPORT, iViewport);
+  if (!mHDRBuffer) {
+    GLint iViewport[4];
+    glGetIntegerv(GL_VIEWPORT, iViewport);
 
-  auto        viewport = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
-  auto const& data     = mGBufferData[viewport];
+    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto const& data = mGBufferData[viewport];
 
-  data.mDepthBuffer->Bind();
-  glCopyTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT, iViewport[0], iViewport[1],
-      iViewport[2], iViewport[3], 0);
-  data.mColorBuffer->Bind();
-  glCopyTexImage2D(
-      GL_TEXTURE_RECTANGLE, 0, GL_RGB8, iViewport[0], iViewport[1], iViewport[2], iViewport[3], 0);
+    data.mDepthBuffer->Bind();
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, iViewport[0], iViewport[1], iViewport[2],
+        iViewport[3], 0);
+    data.mColorBuffer->Bind();
+    glCopyTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGB8, iViewport[0], iViewport[1], iViewport[2], iViewport[3], 0);
+  }
 
   // get matrices and related values -----------------------------------------
   GLfloat glMatMV[16];
   glGetFloatv(GL_MODELVIEW_MATRIX, &glMatMV[0]);
-  VistaTransformMatrix matMV(VistaTransformMatrix(glMatMV, true) * matModelMatrix *
-                             VistaTransformMatrix((float)(1.0 / (1.0 - mAtmosphereHeight)), 0, 0, 0,
-                                 0, (float)(1.0 / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
-                                 (float)(1.0 / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0, 1));
+  glm::mat4 matMV(glm::make_mat4x4(glMatMV) * glm::mat4(mWorldTransform) *
+                  glm::mat4((float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
+                      (float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
+                      (float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0, 1));
 
-  VistaTransformMatrix matInvMV(matMV.GetInverted());
+  auto matInvMV = glm::inverse(matMV);
 
   GLfloat glMatP[16];
   glGetFloatv(GL_PROJECTION_MATRIX, &glMatP[0]);
-  VistaTransformMatrix matInvP(VistaTransformMatrix(glMatP, true).GetInverted());
-  VistaTransformMatrix matInvMVP(matInvMV * matInvP);
+  glm::mat4 matInvP = glm::inverse(glm::make_mat4x4(glMatP));
+  glm::mat4 matInvMVP(matInvMV * matInvP);
+
+  glm::vec3 sunDir =
+      glm::normalize(glm::vec3(glm::inverse(mWorldTransform) * glm::vec4(mSunDirection, 0)));
 
   // set uniforms ------------------------------------------------------------
   mAtmoShader->Bind();
 
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uSunDir"), mSunDirection[0],
-      mSunDirection[1], mSunDirection[2]);
+  double nearClip, farClip;
+  GetVistaSystem()
+      ->GetDisplayManager()
+      ->GetCurrentRenderInfo()
+      ->m_pViewport->GetProjection()
+      ->GetProjectionProperties()
+      ->GetClippingRange(nearClip, farClip);
+
+  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uSunIntensity"), mSunIntensity);
   mAtmoShader->SetUniform(
-      mAtmoShader->GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
+      mAtmoShader->GetUniformLocation("uSunDir"), sunDir[0], sunDir[1], sunDir[2]);
+  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uFarClip"), (float)farClip);
 
   mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uWaterLevel"), mWaterLevel);
   mAtmoShader->SetUniform(
       mAtmoShader->GetUniformLocation("uAmbientBrightness"), mAmbientBrightness);
 
-  data.mDepthBuffer->Bind(GL_TEXTURE0);
-  data.mColorBuffer->Bind(GL_TEXTURE1);
-  mTransmittanceTexture->Bind(GL_TEXTURE2);
+  if (mHDRBuffer) {
+    mHDRBuffer->doPingPong();
+    mHDRBuffer->bind();
+    mHDRBuffer->getDepthAttachment()->Bind(GL_TEXTURE0);
+    mHDRBuffer->getCurrentReadAttachment()->Bind(GL_TEXTURE1);
+  } else {
+    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto const& data = mGBufferData[viewport];
+    data.mDepthBuffer->Bind(GL_TEXTURE0);
+    data.mColorBuffer->Bind(GL_TEXTURE1);
+  }
 
   mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uDepthBuffer"), 0);
   mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uColorBuffer"), 1);
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uTransmittanceTexture"), 2);
 
-  if (mCloudTexture) {
+  if (mUseClouds && mCloudTexture) {
     mCloudTexture->Bind(GL_TEXTURE3);
     mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uCloudTexture"), 3);
-    mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uCloudAltitude"), mCloudAltitude);
+    mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uCloudAltitude"), mCloudHeight);
   }
 
   if (mShadowMap) {
@@ -571,13 +480,13 @@ void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
 
   // Why is there no set uniform for matrices???
   GLint loc = mAtmoShader->GetUniformLocation("uMatInvMV");
-  glUniformMatrix4fv(loc, 1, GL_FALSE, matInvMV.GetData());
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvMV));
   loc = mAtmoShader->GetUniformLocation("uMatInvMVP");
-  glUniformMatrix4fv(loc, 1, GL_FALSE, matInvMVP.GetData());
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvMVP));
   loc = mAtmoShader->GetUniformLocation("uMatInvP");
-  glUniformMatrix4fv(loc, 1, GL_FALSE, matInvP.GetData());
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvP));
   loc = mAtmoShader->GetUniformLocation("uMatMV");
-  glUniformMatrix4fv(loc, 1, GL_FALSE, matMV.GetData());
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matMV));
 
   // draw --------------------------------------------------------------------
   mQuadVAO->Bind();
@@ -585,11 +494,18 @@ void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
   mQuadVAO->Release();
 
   // clean up ----------------------------------------------------------------
-  data.mDepthBuffer->Unbind(GL_TEXTURE0);
-  data.mColorBuffer->Unbind(GL_TEXTURE1);
-  mTransmittanceTexture->Unbind(GL_TEXTURE2);
 
-  if (mCloudTexture) {
+  if (mHDRBuffer) {
+    mHDRBuffer->getDepthAttachment()->Unbind(GL_TEXTURE0);
+    mHDRBuffer->getCurrentReadAttachment()->Unbind(GL_TEXTURE1);
+  } else {
+    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto const& data = mGBufferData[viewport];
+    data.mDepthBuffer->Unbind(GL_TEXTURE0);
+    data.mColorBuffer->Unbind(GL_TEXTURE1);
+  }
+
+  if (mUseClouds && mCloudTexture) {
     mCloudTexture->Unbind(GL_TEXTURE3);
   }
 
@@ -605,49 +521,44 @@ void VistaAtmosphere::draw(VistaTransformMatrix const& matModelMatrix) {
   // It may be used for fake HDR effects such as dimming stars.
 
   // some required positions and directions
-  VistaVector3D vCamera         = (matInvMVP * VistaVector3D(0, 0, 0)).GetHomogenized();
-  VistaVector3D vPlanet         = VistaVector3D(0, 0, 0);
-  VistaVector3D vCameraToPlanet = (vCamera - vPlanet).GetNormalized();
+  glm::vec4 temp            = matInvMVP * glm::vec4(0, 0, 0, 1);
+  glm::vec3 vCamera         = glm::vec3(temp) / temp[3];
+  glm::vec3 vPlanet         = glm::vec3(0, 0, 0);
+  glm::vec3 vCameraToPlanet = glm::normalize(vCamera - vPlanet);
 
   // [planet surface ... 5x atmosphere boundary] -> [0 ... 1]
   float fHeightInAtmosphere = (float)std::min(1.0,
-      std::max(0.0, (vCamera.GetLength() - (1.f - mAtmosphereHeight)) / (mAtmosphereHeight * 5)));
+      std::max(0.0, (glm::length(vCamera) - (1.f - mAtmosphereHeight)) / (mAtmosphereHeight * 5)));
 
   // [noon ... midnight] -> [1 ... -1]
-  float fDaySide = vCameraToPlanet * mSunDirection;
+  float fDaySide = glm::dot(vCameraToPlanet, sunDir);
 
   // limit brightness when on night side (also in dusk an dawn time)
   float fBrightnessOnSurface = std::pow(std::min(1.f, std::max(0.f, fDaySide + 1.f)), 50.f);
 
   // reduce brightness in outer space
   mApproximateBrightness = (1.f - fHeightInAtmosphere) * fBrightnessOnSurface;
-}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool VistaAtmosphere::Do() {
-  draw(VistaTransformMatrix());
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool VistaAtmosphere::GetBoundingBox(VistaBoundingBox& oBoundingBox) {
-
+bool AtmosphereRenderer::GetBoundingBox(VistaBoundingBox& bb) {
   // Boundingbox is computed by translation an edge points
   float fMin[3] = {(float)(-1.0 / (1.0 - mAtmosphereHeight)),
       (float)(-1.0 / (1.0 - mAtmosphereHeight)), (float)(-1.0 / (1.0 - mAtmosphereHeight))};
   float fMax[3] = {(float)(1.0 / (1.0 - mAtmosphereHeight)),
       (float)(1.0 / (1.0 - mAtmosphereHeight)), (float)(1.0 / (1.0 - mAtmosphereHeight))};
 
-  oBoundingBox.SetBounds(fMin, fMax);
+  bb.SetBounds(fMin, fMax);
 
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void VistaAtmosphere::initData() {
+void AtmosphereRenderer::initData() {
   // create quad -------------------------------------------------------------
   std::vector<float> data(8);
   data[0] = -1;
@@ -671,7 +582,7 @@ void VistaAtmosphere::initData() {
   for (auto const& viewport : GetVistaSystem()->GetDisplayManager()->GetViewports()) {
     GBufferData bufferData;
 
-    bufferData.mDepthBuffer = new VistaTexture(GL_TEXTURE_RECTANGLE);
+    bufferData.mDepthBuffer = new VistaTexture(GL_TEXTURE_2D);
     bufferData.mDepthBuffer->Bind();
     bufferData.mDepthBuffer->SetWrapS(GL_CLAMP);
     bufferData.mDepthBuffer->SetWrapT(GL_CLAMP);
@@ -679,7 +590,7 @@ void VistaAtmosphere::initData() {
     bufferData.mDepthBuffer->SetMagFilter(GL_NEAREST);
     bufferData.mDepthBuffer->Unbind();
 
-    bufferData.mColorBuffer = new VistaTexture(GL_TEXTURE_RECTANGLE);
+    bufferData.mColorBuffer = new VistaTexture(GL_TEXTURE_2D);
     bufferData.mColorBuffer->Bind();
     bufferData.mColorBuffer->SetWrapS(GL_CLAMP);
     bufferData.mColorBuffer->SetWrapT(GL_CLAMP);
@@ -689,11 +600,6 @@ void VistaAtmosphere::initData() {
 
     mGBufferData[viewport.second] = bufferData;
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void VistaAtmosphere::updateTransmittanceTexture() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

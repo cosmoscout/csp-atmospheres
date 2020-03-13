@@ -4,12 +4,17 @@
 //                        Copyright: (c) 2019 German Aerospace Center (DLR)                       //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef CSP_ATMOSPHERE_VISTA_ATMOSPHERE_HPP
-#define CSP_ATMOSPHERE_VISTA_ATMOSPHERE_HPP
+#ifndef CSP_ATMOSPHERE_RENDERER_HPP
+#define CSP_ATMOSPHERE_RENDERER_HPP
+
+#include "../../../src/cs-scene/CelestialObject.hpp"
+#include "Plugin.hpp"
 
 #include <VistaBase/VistaVectorMath.h>
 #include <VistaKernel/GraphicsManager/VistaOpenGLDraw.h>
 
+#include <glm/glm.hpp>
+#include <memory>
 #include <unordered_map>
 
 class VistaViewport;
@@ -21,34 +26,35 @@ class VistaOpenGLNode;
 
 namespace cs::graphics {
 class ShadowMap;
-}
+class HDRBuffer;
+} // namespace cs::graphics
 
 namespace csp::atmospheres {
 
 /// This class draws a configurable atmosphere. Just put an OpenGLNode into your SceneGraph at the
 /// very same position as your planet. Set its scale to the same size as your planet.
-class VistaAtmosphere : public IVistaOpenGLDraw {
+class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
-  /// When using these presets, all the configuration options are set accordingly.
-  enum class Preset { eEarth, eMars, eBlueParadise, eSmog };
+  AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties);
+  ~AtmosphereRenderer() override;
 
-  explicit VistaAtmosphere(Preset ePreset = Preset::eEarth);
-  explicit VistaAtmosphere(const std::string& sConfigFile);
-  ~VistaAtmosphere() override;
+  /// Updates the current sun position and brightness.
+  void setSun(glm::vec3 const& direction, float illuminance);
 
-  /// Loads a given preset. All values below will be adjusted.
-  void loadPreset(Preset ePreset);
-  void loadConfigFile(const std::string& sConfigFile);
+  /// Set the planet's radii.
+  void setRadii(glm::dvec3 const& radii);
 
-  /// When set, the shader will make lookups in order to generate light shafts.
-  void setShadowMap(cs::graphics::ShadowMap const* pShadowMap);
+  /// Set the transformation used to draw the atmosphere.
+  void setWorldTransform(glm::dmat4 const& transform);
 
   /// When set, the shader will draw this texture at the given altitude.
-  void setCloudTexture(VistaTexture* pTexture, float fAltitude);
+  void setCloudTexture(std::shared_ptr<VistaTexture> const& texture, float height);
 
-  /// The model space incoming light direction. Default is (1, 0, 0).
-  VistaVector3D getSunDirection() const;
-  void          setSunDirection(const VistaVector3D& vValue);
+  /// When set, the shader will make lookups in order to generate light shafts.
+  void setShadowMap(std::shared_ptr<cs::graphics::ShadowMap> const& pShadowMap);
+
+  /// When set, this buffer will be used as background texture instead of the current backbuffer.
+  void setHDRBuffer(std::shared_ptr<cs::graphics::HDRBuffer> const& pHDRBuffer);
 
   /// Returns a value [0..1] which approximates the overall brightness of the atmosphere. Will be
   /// close to zero in outer space or in the planets shadow, close to one on the bright surface of
@@ -64,10 +70,6 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
   int  getSecondaryRaySteps() const;
   void setSecondaryRaySteps(int iValue);
 
-  /// The brightness of the sun. Default is 15.
-  float getSunIntensity() const;
-  void  setSunIntensity(float fValue);
-
   /// The maximum height of the atmosphere above the planets surface relative to the planets radius.
   /// Default depends on the preset; for Earth 60.0 / 6360.0 is assumed.
   double getAtmosphereHeight() const;
@@ -80,8 +82,8 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
 
   /// The Mie scattering values. Default depends on the preset; for Earth (21.0, 21.0, 21.0) is
   /// assumed.
-  VistaVector3D getMieScattering() const;
-  void          setMieScattering(const VistaVector3D& vValue);
+  glm::vec3 getMieScattering() const;
+  void      setMieScattering(const glm::vec3& vValue);
 
   /// The Mie scattering anisotropy. Default depends on the preset; for Earth 0.76 is assumed.
   double getMieAnisotropy() const;
@@ -94,8 +96,8 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
 
   /// The Rayleigh scattering values. Default depends on the preset; for Earth (5.8, 13.5, 21.1) is
   /// assumed.
-  VistaVector3D getRayleighScattering() const;
-  void          setRayleighScattering(const VistaVector3D& vValue);
+  glm::vec3 getRayleighScattering() const;
+  void      setRayleighScattering(const glm::vec3& vValue);
 
   /// The Rayleigh scattering anisotropy. Default depends on the preset; for Earth 0.0 is assumed.
   double getRayleighAnisotropy() const;
@@ -130,25 +132,24 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
   bool getUseLinearDepthBuffer() const;
   void setUseLinearDepthBuffer(bool bEnable);
 
-  /// Optional draw method if the atmosphere is not attached to an OpenGLNode the provided
-  /// matModelMatrix will be multiplied with GL_MODELVIEW_MATRIX.
-  void draw(VistaTransformMatrix const& matModelMatrix);
-
   bool Do() override;
   bool GetBoundingBox(VistaBoundingBox& bb) override;
 
  private:
   void initData();
-  void updateTransmittanceTexture();
   void updateShader();
 
-  cs::graphics::ShadowMap const* mShadowMap = nullptr;
+  std::shared_ptr<Plugin::Properties> mProperties;
+  std::shared_ptr<VistaTexture>       mCloudTexture;
+  float                               mCloudHeight    = 0.001;
+  bool                                mUseClouds      = false;
+  glm::dvec3                          mRadii          = glm::dvec3(1.0, 1.0, 1.0);
+  glm::dmat4                          mWorldTransform = glm::dmat4(1.0);
 
-  VistaTexture* mCloudTexture  = nullptr;
-  float         mCloudAltitude = 0.f;
+  std::shared_ptr<cs::graphics::ShadowMap> mShadowMap;
+  std::shared_ptr<cs::graphics::HDRBuffer> mHDRBuffer;
 
-  VistaTexture*    mTransmittanceTexture = nullptr;
-  VistaGLSLShader* mAtmoShader           = nullptr;
+  VistaGLSLShader* mAtmoShader = nullptr;
 
   struct GBufferData {
     VistaTexture* mDepthBuffer = nullptr;
@@ -160,25 +161,24 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
   VistaVertexArrayObject* mQuadVAO = nullptr;
   VistaBufferObject*      mQuadVBO = nullptr;
 
-  bool          mTransmittanceTextureDirty = true;
-  bool          mShaderDirty               = true;
-  bool          mDrawSun                   = true;
-  bool          mDrawWater                 = false;
-  float         mWaterLevel                = 0.0;
-  float         mAmbientBrightness         = 0.2;
-  double        mAtmosphereHeight          = 1.0;
-  int           mPrimaryRaySteps           = 15;
-  int           mSecondaryRaySteps         = 4;
-  float         mSunIntensity              = 1.f;
-  VistaVector3D mSunDirection              = VistaVector3D(1, 0, 0);
+  bool      mShaderDirty       = true;
+  bool      mDrawSun           = true;
+  bool      mDrawWater         = false;
+  float     mWaterLevel        = 0.0;
+  float     mAmbientBrightness = 0.2;
+  double    mAtmosphereHeight  = 1.0;
+  int       mPrimaryRaySteps   = 15;
+  int       mSecondaryRaySteps = 4;
+  float     mSunIntensity      = 1.f;
+  glm::vec3 mSunDirection      = glm::vec3(1, 0, 0);
 
-  double        mMieHeight     = 0.0;
-  VistaVector3D mMieScattering = VistaVector3D(1, 1, 1);
-  double        mMieAnisotropy = 0.0;
+  double    mMieHeight     = 0.0;
+  glm::vec3 mMieScattering = glm::vec3(1, 1, 1);
+  double    mMieAnisotropy = 0.0;
 
-  double        mRayleighHeight     = 0.0;
-  VistaVector3D mRayleighScattering = VistaVector3D(1, 1, 1);
-  double        mRayleighAnisotropy = 0.0;
+  double    mRayleighHeight     = 0.0;
+  glm::vec3 mRayleighScattering = glm::vec3(1, 1, 1);
+  double    mRayleighAnisotropy = 0.0;
 
   float mApproximateBrightness = 0.0;
 
@@ -191,5 +191,7 @@ class VistaAtmosphere : public IVistaOpenGLDraw {
   static const std::string cAtmosphereFrag0;
   static const std::string cAtmosphereFrag1;
 };
+
 } // namespace csp::atmospheres
-#endif // CSP_ATMOSPHERE_VISTA_ATMOSPHERE_HPP
+
+#endif // CSP_ATMOSPHERE_RENDERER_HPP

@@ -44,7 +44,6 @@ class Plugin : public cs::core::PluginBase {
       double                     mRayleighScatteringG;
       double                     mRayleighScatteringB;
       double                     mRayleighAnisotropy;
-      double                     mSunIntensity;
       std::optional<std::string> mCloudTexture; ///< Path to the cloud texture.
       std::optional<double>      mCloudHeight;  ///< Relative to the planets radius.
     };
@@ -62,8 +61,11 @@ class Plugin : public cs::core::PluginBase {
  private:
   Settings                                 mPluginSettings;
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
-  std::vector<VistaOpenGLNode*>            mAtmosphereNodes;
   std::shared_ptr<Properties>              mProperties;
+
+  int mEnableShadowsConnection     = -1;
+  int mEnableHDRConnection         = -1;
+  int mAmbientBrightnessConnection = -1;
 };
 
 } // namespace csp::atmospheres

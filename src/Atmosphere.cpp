@@ -8,124 +8,79 @@
 
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
-#include "../../../src/cs-utils/FrameTimings.hpp"
+#include "../../../src/cs-graphics/TextureLoader.hpp"
+#include "../../../src/cs-utils/utils.hpp"
 
+#include <VistaKernel/GraphicsManager/VistaGroupNode.h>
+#include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
+#include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
 #include <VistaKernel/VistaSystem.h>
-#include <glm/gtc/type_ptr.hpp>
+#include <VistaKernelOpenSGExt/VistaOpenSGMaterialTools.h>
 
 namespace csp::atmospheres {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Atmosphere::Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphicsEngine,
-    std::shared_ptr<Plugin::Properties> const& pProperties, std::string const& sCenterName,
+Atmosphere::Atmosphere(std::shared_ptr<Plugin::Properties> const& pProperties,
+    Plugin::Settings::Atmosphere const& settings, std::string const& sCenterName,
     std::string const& sFrameName, double tStartExistence, double tEndExistence)
     : cs::scene::CelestialObject(sCenterName, sFrameName, tStartExistence, tEndExistence)
-    , mGraphicsEngine(pGraphicsEngine)
-    , mProperties(pProperties)
-    , mRadii(cs::core::SolarSystem::getRadii(sCenterName))
-    , mAtmosphere() {
+    , mRenderer(pProperties)
+    , mProperties(pProperties) {
 
-  pVisibleRadius = mRadii[0];
+  auto radii(cs::core::SolarSystem::getRadii(sCenterName));
+  pVisibleRadius = radii[0];
 
-  mAtmosphere.setUseLinearDepthBuffer(true);
-  mAtmosphere.setUseToneMapping(true, 0.5, 2.4);
-  mAtmosphere.setDrawSun(false);
-  mAtmosphere.setSecondaryRaySteps(3);
-  mAtmosphere.setPrimaryRaySteps(mProperties->mQuality.get());
+  if (settings.mCloudTexture) {
+    mRenderer.setCloudTexture(
+        cs::graphics::TextureLoader::loadFromFile(*settings.mCloudTexture), *settings.mCloudHeight);
+  }
 
-  // scene-wide settings -----------------------------------------------------
-  mAmbientBrightnessConnection = mGraphicsEngine->pAmbientBrightness.onChange().connect(
-      [this](float val) { mAtmosphere.setAmbientBrightness(val * 0.4f); });
+  mRenderer.setRadii(radii);
+  mRenderer.setUseLinearDepthBuffer(true);
+  mRenderer.setDrawSun(false);
+  mRenderer.setSecondaryRaySteps(3);
+  mRenderer.setPrimaryRaySteps(mProperties->mQuality.get());
+  mRenderer.setAtmosphereHeight(settings.mAtmosphereHeight);
+  mRenderer.setMieHeight(settings.mMieHeight);
+  mRenderer.setMieScattering(
+      glm::vec3(settings.mMieScatteringR, settings.mMieScatteringG, settings.mMieScatteringB));
+  mRenderer.setMieAnisotropy(settings.mMieAnisotropy);
+  mRenderer.setRayleighHeight(settings.mRayleighHeight);
+  mRenderer.setRayleighScattering(glm::vec3(
+      settings.mRayleighScatteringR, settings.mRayleighScatteringG, settings.mRayleighScatteringB));
+  mRenderer.setRayleighAnisotropy(settings.mRayleighAnisotropy);
 
-  mProperties->mQuality.onChange().connect(
-      [this](int val) { mAtmosphere.setPrimaryRaySteps(val); });
-
-  mProperties->mEnableWater.onChange().connect([this](bool val) { mAtmosphere.setDrawWater(val); });
-
-  mProperties->mEnableClouds.onChange().connect([this](bool val) {
-    mAtmosphere.setCloudTexture(val ? mCloudTexture.get() : nullptr, (float)mCloudHeight);
-  });
-
-  mProperties->mWaterLevel.onChange().connect(
-      [this](float val) { mAtmosphere.setWaterLevel(val / 1000); });
-
-  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
-    mAtmosphere.setShadowMap(
-        (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get())
-            ? mGraphicsEngine->getShadowMap()
-            : nullptr);
-  });
-
-  mProperties->mEnableLightShafts.onChange().connect([this](bool val) {
-    mAtmosphere.setShadowMap(
-        (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get())
-            ? mGraphicsEngine->getShadowMap()
-            : nullptr);
-  });
+  VistaSceneGraph* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
+  mAtmosphereNode      = pSG->NewOpenGLNode(pSG->GetRoot(), &mRenderer);
+  mAtmosphereNode->SetIsEnabled(false);
+  VistaOpenSGMaterialTools::SetSortKeyOnSubtree(
+      mAtmosphereNode, static_cast<int>(cs::utils::DrawOrder::eAtmospheres));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Atmosphere::~Atmosphere() {
-  mGraphicsEngine->pAmbientBrightness.onChange().disconnect(mAmbientBrightnessConnection);
-  mGraphicsEngine->pEnableShadows.onChange().disconnect(mEnableShadowsConnection);
+  VistaSceneGraph* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
+  pSG->GetRoot()->DisconnectChild(mAtmosphereNode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-VistaAtmosphere& Atmosphere::getAtmosphere() {
-  return mAtmosphere;
+AtmosphereRenderer& Atmosphere::getRenderer() {
+  return mRenderer;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Atmosphere::setSun(std::shared_ptr<const cs::scene::CelestialObject> const& sun) {
-  mSun = sun;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Atmosphere::setCloudTexture(std::shared_ptr<VistaTexture> const& texture, double height) {
-  mCloudTexture = texture;
-  mCloudHeight  = height;
-
-  if (mProperties->mEnableClouds.get()) {
-    mAtmosphere.setCloudTexture(mCloudTexture.get(), (float)mCloudHeight);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Atmosphere::update(double tTime, cs::scene::CelestialObserver const& oObs) {
-  cs::scene::CelestialObject::update(tTime, oObs);
-
-  if (mSun && getIsInExistence()) {
-    auto sunDir = glm::normalize(
-        glm::inverse(matWorldTransform) * (mSun->getWorldPosition() - getWorldPosition()));
-
-    mAtmosphere.setSunDirection(VistaVector3D(sunDir[0], sunDir[1], sunDir[2]));
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool Atmosphere::Do() {
+void Atmosphere::update(double time, cs::scene::CelestialObserver const& oObs) {
+  cs::scene::CelestialObject::update(time, oObs);
   if (mProperties->mEnabled.get() && getIsInExistence() && pVisible.get()) {
-    cs::utils::FrameTimings::ScopedTimer timer("Atmosphere " + getCenterName());
-    VistaTransformMatrix                 matM(glm::value_ptr(matWorldTransform), true);
-    VistaTransformMatrix                 matScale;
-    matScale.SetToScaleMatrix((float)mRadii[0], (float)mRadii[0], (float)mRadii[0]);
-    mAtmosphere.draw(matM * matScale);
+    mAtmosphereNode->SetIsEnabled(true);
+    mRenderer.setWorldTransform(matWorldTransform);
+  } else {
+    mAtmosphereNode->SetIsEnabled(false);
   }
-
-  return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool Atmosphere::GetBoundingBox(VistaBoundingBox& bb) {
-  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

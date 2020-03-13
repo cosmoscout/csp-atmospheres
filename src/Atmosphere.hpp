@@ -8,49 +8,33 @@
 #define CSP_ATMOSPHERE_HPP
 
 #include "../../../src/cs-scene/CelestialObject.hpp"
+#include "AtmosphereRenderer.hpp"
 #include "Plugin.hpp"
 
-#include "VistaAtmosphere.hpp"
-
-#include <VistaKernel/GraphicsManager/VistaOpenGLDraw.h>
-
-#include <memory>
-
-namespace cs::core {
-class GraphicsEngine;
-}
+#include <glm/glm.hpp>
 
 namespace csp::atmospheres {
 
-/// This is the atmosphere of a single planet/moon. For more information see VistaAtmosphere.
-class Atmosphere : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
+/// This is a wrapper around a AtmosphereRenderer, adding SPICE based positioning.
+class Atmosphere : public cs::scene::CelestialObject {
  public:
-  Atmosphere(std::shared_ptr<cs::core::GraphicsEngine> const& pGraphicsEngine,
-      std::shared_ptr<Plugin::Properties> const& pProperties, std::string const& sCenterName,
+  Atmosphere(std::shared_ptr<Plugin::Properties> const& pProperties,
+      Plugin::Settings::Atmosphere const& settings, std::string const& sCenterName,
       std::string const& sFrameName, double tStartExistence, double tEndExistence);
   ~Atmosphere();
 
-  void setSun(std::shared_ptr<const cs::scene::CelestialObject> const& sun);
-  void setCloudTexture(std::shared_ptr<VistaTexture> const& texture, double height);
+  /// Access the internal AtmosphereRender to configure atmosphere parameters.
+  AtmosphereRenderer&       getRenderer();
+  AtmosphereRenderer const& getRenderer() const;
 
-  // csp::atmospheres::VistaAtmosphere const& getAtmosphere() const;
-  VistaAtmosphere& getAtmosphere();
-
-  void update(double tTime, cs::scene::CelestialObserver const& oObs) override;
-
-  bool Do() override;
-  bool GetBoundingBox(VistaBoundingBox& bb) override;
+  /// This is called once a frame by the solar system. It updates the atmosphere's position based on
+  /// the SPICE kernels for the center and frame specified at construction time.
+  void update(double time, cs::scene::CelestialObserver const& oObs) override;
 
  private:
-  std::shared_ptr<const cs::scene::CelestialObject> mSun;
-  std::shared_ptr<cs::core::GraphicsEngine>         mGraphicsEngine;
-  std::shared_ptr<Plugin::Properties>               mProperties;
-  VistaAtmosphere                                   mAtmosphere;
-  std::shared_ptr<VistaTexture>                     mCloudTexture;
-  double                                            mCloudHeight = 0.001;
-  glm::dvec3                                        mRadii;
-  int                                               mAmbientBrightnessConnection = -1;
-  int                                               mEnableShadowsConnection     = -1;
+  AtmosphereRenderer                  mRenderer;
+  std::shared_ptr<Plugin::Properties> mProperties;
+  VistaOpenGLNode*                    mAtmosphereNode;
 };
 
 } // namespace csp::atmospheres
