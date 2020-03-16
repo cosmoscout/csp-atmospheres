@@ -12,15 +12,15 @@
 
 #include <VistaBase/VistaVectorMath.h>
 #include <VistaKernel/GraphicsManager/VistaOpenGLDraw.h>
+#include <VistaOGLExt/VistaBufferObject.h>
+#include <VistaOGLExt/VistaGLSLShader.h>
+#include <VistaOGLExt/VistaVertexArrayObject.h>
 
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
 
 class VistaViewport;
-class VistaGLSLShader;
-class VistaVertexArrayObject;
-class VistaBufferObject;
 class VistaTexture;
 class VistaOpenGLNode;
 
@@ -36,7 +36,6 @@ namespace csp::atmospheres {
 class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
   AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties);
-  ~AtmosphereRenderer() override;
 
   /// Updates the current sun position and brightness.
   void setSun(glm::vec3 const& direction, float illuminance);
@@ -149,17 +148,17 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   std::shared_ptr<cs::graphics::ShadowMap> mShadowMap;
   std::shared_ptr<cs::graphics::HDRBuffer> mHDRBuffer;
 
-  VistaGLSLShader* mAtmoShader = nullptr;
+  std::unique_ptr<VistaGLSLShader> mAtmoShader;
 
   struct GBufferData {
-    VistaTexture* mDepthBuffer = nullptr;
-    VistaTexture* mColorBuffer = nullptr;
+    std::unique_ptr<VistaTexture> mDepthBuffer;
+    std::unique_ptr<VistaTexture> mColorBuffer;
   };
 
   std::unordered_map<VistaViewport*, GBufferData> mGBufferData;
 
-  VistaVertexArrayObject* mQuadVAO = nullptr;
-  VistaBufferObject*      mQuadVBO = nullptr;
+  std::unique_ptr<VistaVertexArrayObject> mQuadVAO;
+  std::unique_ptr<VistaBufferObject>      mQuadVBO;
 
   bool      mShaderDirty       = true;
   bool      mDrawSun           = true;

@@ -26,11 +26,8 @@
 #include <VistaMath/VistaBoundingBox.h>
 #include <VistaOGLExt/Rendering/VistaGeometryData.h>
 #include <VistaOGLExt/Rendering/VistaGeometryRenderingCore.h>
-#include <VistaOGLExt/VistaBufferObject.h>
-#include <VistaOGLExt/VistaGLSLShader.h>
 #include <VistaOGLExt/VistaOGLUtils.h>
 #include <VistaOGLExt/VistaTexture.h>
-#include <VistaOGLExt/VistaVertexArrayObject.h>
 #include <VistaTools/tinyXML/tinyxml.h>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -58,19 +55,6 @@ AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const
   });
 
   mProperties->mWaterLevel.onChange().connect([this](float val) { setWaterLevel(val / 1000); });
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-AtmosphereRenderer::~AtmosphereRenderer() {
-  delete mAtmoShader;
-  delete mQuadVAO;
-  delete mQuadVBO;
-
-  for (auto data : mGBufferData) {
-    delete data.second.mDepthBuffer;
-    delete data.second.mColorBuffer;
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -326,11 +310,7 @@ void AtmosphereRenderer::setUseLinearDepthBuffer(bool bEnable) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void AtmosphereRenderer::updateShader() {
-  if (mAtmoShader) {
-    delete mAtmoShader;
-  }
-
-  mAtmoShader = new VistaGLSLShader();
+  mAtmoShader = std::make_unique<VistaGLSLShader>();
 
   std::string sVert(cAtmosphereVert);
   std::string sFrag(cAtmosphereFrag0 + cAtmosphereFrag1);
@@ -576,13 +556,14 @@ void AtmosphereRenderer::initData() {
 
   // positions
   mQuadVAO->EnableAttributeArray(0);
-  mQuadVAO->SpecifyAttributeArrayFloat(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0, mQuadVBO);
+  mQuadVAO->SpecifyAttributeArrayFloat(
+      0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0, mQuadVBO.get());
 
   // create textures ---------------------------------------------------------
   for (auto const& viewport : GetVistaSystem()->GetDisplayManager()->GetViewports()) {
     GBufferData bufferData;
 
-    bufferData.mDepthBuffer = new VistaTexture(GL_TEXTURE_2D);
+    bufferData.mDepthBuffer = std::make_unique<VistaTexture>(GL_TEXTURE_2D);
     bufferData.mDepthBuffer->Bind();
     bufferData.mDepthBuffer->SetWrapS(GL_CLAMP);
     bufferData.mDepthBuffer->SetWrapT(GL_CLAMP);
@@ -590,7 +571,7 @@ void AtmosphereRenderer::initData() {
     bufferData.mDepthBuffer->SetMagFilter(GL_NEAREST);
     bufferData.mDepthBuffer->Unbind();
 
-    bufferData.mColorBuffer = new VistaTexture(GL_TEXTURE_2D);
+    bufferData.mColorBuffer = std::make_unique<VistaTexture>(GL_TEXTURE_2D);
     bufferData.mColorBuffer->Bind();
     bufferData.mColorBuffer->SetWrapS(GL_CLAMP);
     bufferData.mColorBuffer->SetWrapT(GL_CLAMP);
@@ -598,7 +579,7 @@ void AtmosphereRenderer::initData() {
     bufferData.mColorBuffer->SetMagFilter(GL_NEAREST);
     bufferData.mColorBuffer->Unbind();
 
-    mGBufferData[viewport.second] = bufferData;
+    mGBufferData.emplace(viewport.second, std::move(bufferData));
   }
 }
 

@@ -106,7 +106,7 @@ void Plugin::init() {
 
     mSolarSystem->registerAnchor(atmosphere);
 
-    mAtmospheres.push_back(atmosphere);
+    mAtmospheres.emplace_back(atmosphere);
   }
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
@@ -143,6 +143,7 @@ void Plugin::init() {
       }
     }
   });
+  mGraphicsEngine->pEnableShadows.touchFor(mEnableShadowsConnection);
 
   mEnableHDRConnection = mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
@@ -154,6 +155,7 @@ void Plugin::init() {
       }
     }
   });
+  mGraphicsEngine->pEnableHDR.touchFor(mEnableHDRConnection);
 
   mAmbientBrightnessConnection =
       mGraphicsEngine->pAmbientBrightness.onChange().connect([this](float val) {
@@ -161,6 +163,7 @@ void Plugin::init() {
           atmosphere->getRenderer().setAmbientBrightness(val * 0.4f);
         }
       });
+  mGraphicsEngine->pAmbientBrightness.touchFor(mAmbientBrightnessConnection);
 
   mProperties->mEnableLightShafts.onChange().connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
@@ -183,6 +186,8 @@ void Plugin::deInit() {
   for (auto const& atmosphere : mAtmospheres) {
     mSolarSystem->unregisterAnchor(atmosphere);
   }
+
+  mGuiManager->removeSettingsSection("Atmospheres");
 
   mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableWater");
   mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableClouds");
