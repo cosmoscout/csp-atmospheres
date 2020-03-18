@@ -148,7 +148,9 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   std::shared_ptr<cs::graphics::ShadowMap> mShadowMap;
   std::shared_ptr<cs::graphics::HDRBuffer> mHDRBuffer;
 
-  std::unique_ptr<VistaGLSLShader> mAtmoShader;
+  VistaGLSLShader        mAtmoShader;
+  VistaVertexArrayObject mQuadVAO;
+  VistaBufferObject      mQuadVBO;
 
   struct GBufferData {
     std::unique_ptr<VistaTexture> mDepthBuffer;
@@ -156,9 +158,6 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   };
 
   std::unordered_map<VistaViewport*, GBufferData> mGBufferData;
-
-  std::unique_ptr<VistaVertexArrayObject> mQuadVAO;
-  std::unique_ptr<VistaBufferObject>      mQuadVBO;
 
   bool      mShaderDirty       = true;
   bool      mDrawSun           = true;
