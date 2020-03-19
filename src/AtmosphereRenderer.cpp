@@ -40,18 +40,18 @@ AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const
   initData();
 
   // scene-wide settings -----------------------------------------------------
-  mProperties->mQuality.onChange().connect([this](int val) { setPrimaryRaySteps(val); });
+  mProperties->mQuality.connect([this](int val) { setPrimaryRaySteps(val); });
 
-  mProperties->mEnableWater.onChange().connect([this](bool val) { setDrawWater(val); });
+  mProperties->mEnableWater.connect([this](bool val) { setDrawWater(val); });
 
-  mProperties->mEnableClouds.onChange().connect([this](bool val) {
+  mProperties->mEnableClouds.connect([this](bool val) {
     if (mUseClouds != val) {
       mShaderDirty = true;
       mUseClouds   = val;
     }
   });
 
-  mProperties->mWaterLevel.onChange().connect([this](float val) { setWaterLevel(val / 1000); });
+  mProperties->mWaterLevel.connect([this](float val) { setWaterLevel(val / 1000); });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
