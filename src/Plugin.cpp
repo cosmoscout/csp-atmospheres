@@ -36,34 +36,46 @@ namespace csp::atmospheres {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
-  o.mAtmosphereHeight    = cs::core::parseProperty<double>("atmosphereHeight", j);
-  o.mMieHeight           = cs::core::parseProperty<double>("mieHeight", j);
-  o.mMieScatteringR      = cs::core::parseProperty<double>("mieScatteringR", j);
-  o.mMieScatteringG      = cs::core::parseProperty<double>("mieScatteringG", j);
-  o.mMieScatteringB      = cs::core::parseProperty<double>("mieScatteringB", j);
-  o.mMieAnisotropy       = cs::core::parseProperty<double>("mieAnisotropy", j);
-  o.mRayleighHeight      = cs::core::parseProperty<double>("rayleighHeight", j);
-  o.mRayleighScatteringR = cs::core::parseProperty<double>("rayleighScatteringR", j);
-  o.mRayleighScatteringG = cs::core::parseProperty<double>("rayleighScatteringG", j);
-  o.mRayleighScatteringB = cs::core::parseProperty<double>("rayleighScatteringB", j);
-  o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
+void from_json(nlohmann::json const& j, Plugin::Settings::Atmosphere& o) {
+  cs::core::Settings::deserialize(j, "atmosphereHeight", o.mAtmosphereHeight);
+  cs::core::Settings::deserialize(j, "mieHeight", o.mMieHeight);
+  cs::core::Settings::deserialize(j, "mieScatteringR", o.mMieScatteringR);
+  cs::core::Settings::deserialize(j, "mieScatteringG", o.mMieScatteringG);
+  cs::core::Settings::deserialize(j, "mieScatteringB", o.mMieScatteringB);
+  cs::core::Settings::deserialize(j, "mieAnisotropy", o.mMieAnisotropy);
+  cs::core::Settings::deserialize(j, "rayleighHeight", o.mRayleighHeight);
+  cs::core::Settings::deserialize(j, "rayleighScatteringR", o.mRayleighScatteringR);
+  cs::core::Settings::deserialize(j, "rayleighScatteringG", o.mRayleighScatteringG);
+  cs::core::Settings::deserialize(j, "rayleighScatteringB", o.mRayleighScatteringB);
+  cs::core::Settings::deserialize(j, "rayleighAnisotropy", o.mRayleighAnisotropy);
+  cs::core::Settings::deserialize(j, "cloudTexture", o.mCloudTexture);
+  cs::core::Settings::deserialize(j, "cloudHeight", o.mCloudHeight);
+}
 
-  o.mCloudTexture = cs::core::parseOptional<std::string>("cloudTexture", j);
-
-  o.mCloudHeight = cs::core::parseOptional<double>("cloudHeight", j);
-  if (!o.mCloudHeight) {
-    o.mCloudHeight = 0.001;
-  }
+void to_json(nlohmann::json& j, Plugin::Settings::Atmosphere const& o) {
+  cs::core::Settings::serialize(j, "atmosphereHeight", o.mAtmosphereHeight);
+  cs::core::Settings::serialize(j, "mieHeight", o.mMieHeight);
+  cs::core::Settings::serialize(j, "mieScatteringR", o.mMieScatteringR);
+  cs::core::Settings::serialize(j, "mieScatteringG", o.mMieScatteringG);
+  cs::core::Settings::serialize(j, "mieScatteringB", o.mMieScatteringB);
+  cs::core::Settings::serialize(j, "mieAnisotropy", o.mMieAnisotropy);
+  cs::core::Settings::serialize(j, "rayleighHeight", o.mRayleighHeight);
+  cs::core::Settings::serialize(j, "rayleighScatteringR", o.mRayleighScatteringR);
+  cs::core::Settings::serialize(j, "rayleighScatteringG", o.mRayleighScatteringG);
+  cs::core::Settings::serialize(j, "rayleighScatteringB", o.mRayleighScatteringB);
+  cs::core::Settings::serialize(j, "rayleighAnisotropy", o.mRayleighAnisotropy);
+  cs::core::Settings::serialize(j, "cloudTexture", o.mCloudTexture);
+  cs::core::Settings::serialize(j, "cloudHeight", o.mCloudHeight);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void from_json(const nlohmann::json& j, Plugin::Settings& o) {
-  cs::core::parseSection("csp-atmospheres", [&] {
-    o.mAtmospheres =
-        cs::core::parseMap<std::string, Plugin::Settings::Atmosphere>("atmospheres", j);
-  });
+void from_json(nlohmann::json const& j, Plugin::Settings& o) {
+  cs::core::Settings::deserialize(j, "atmospheres", o.mAtmospheres);
+}
+
+void to_json(nlohmann::json& j, Plugin::Settings const& o) {
+  cs::core::Settings::serialize(j, "atmospheres", o.mAtmospheres);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
