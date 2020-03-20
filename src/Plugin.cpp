@@ -107,9 +107,7 @@ void Plugin::init() {
           "There is no Anchor \"" + atmoSettings.first + "\" defined in the settings.");
     }
 
-    auto   existence       = cs::core::getExistenceFromSettings(*anchor);
-    double tStartExistence = existence.first;
-    double tEndExistence   = existence.second;
+    auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
 
     auto atmosphere = std::make_shared<Atmosphere>(mProperties, atmoSettings.second,
         anchor->second.mCenter, anchor->second.mFrame, tStartExistence, tEndExistence);
