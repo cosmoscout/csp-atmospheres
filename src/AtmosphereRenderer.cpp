@@ -26,11 +26,8 @@
 #include <VistaMath/VistaBoundingBox.h>
 #include <VistaOGLExt/Rendering/VistaGeometryData.h>
 #include <VistaOGLExt/Rendering/VistaGeometryRenderingCore.h>
-#include <VistaOGLExt/VistaBufferObject.h>
-#include <VistaOGLExt/VistaGLSLShader.h>
 #include <VistaOGLExt/VistaOGLUtils.h>
 #include <VistaOGLExt/VistaTexture.h>
-#include <VistaOGLExt/VistaVertexArrayObject.h>
 #include <VistaTools/tinyXML/tinyxml.h>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -38,39 +35,23 @@
 namespace csp::atmospheres {
 
 AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties)
-    : mProperties(pProperties)
-    , mAtmoShader(new VistaGLSLShader())
-    , mQuadVAO(new VistaVertexArrayObject())
-    , mQuadVBO(new VistaBufferObject()) {
+    : mProperties(pProperties) {
 
   initData();
 
   // scene-wide settings -----------------------------------------------------
-  mProperties->mQuality.onChange().connect([this](int val) { setPrimaryRaySteps(val); });
+  mProperties->mQuality.connect([this](int val) { setPrimaryRaySteps(val); });
 
-  mProperties->mEnableWater.onChange().connect([this](bool val) { setDrawWater(val); });
+  mProperties->mEnableWater.connect([this](bool val) { setDrawWater(val); });
 
-  mProperties->mEnableClouds.onChange().connect([this](bool val) {
+  mProperties->mEnableClouds.connect([this](bool val) {
     if (mUseClouds != val) {
       mShaderDirty = true;
       mUseClouds   = val;
     }
   });
 
-  mProperties->mWaterLevel.onChange().connect([this](float val) { setWaterLevel(val / 1000); });
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-AtmosphereRenderer::~AtmosphereRenderer() {
-  delete mAtmoShader;
-  delete mQuadVAO;
-  delete mQuadVBO;
-
-  for (auto data : mGBufferData) {
-    delete data.second.mDepthBuffer;
-    delete data.second.mColorBuffer;
-  }
+  mProperties->mWaterLevel.connect([this](float val) { setWaterLevel(val / 1000); });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -326,11 +307,7 @@ void AtmosphereRenderer::setUseLinearDepthBuffer(bool bEnable) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void AtmosphereRenderer::updateShader() {
-  if (mAtmoShader) {
-    delete mAtmoShader;
-  }
-
-  mAtmoShader = new VistaGLSLShader();
+  mAtmoShader = VistaGLSLShader();
 
   std::string sVert(cAtmosphereVert);
   std::string sFrag(cAtmosphereFrag0 + cAtmosphereFrag1);
@@ -359,10 +336,10 @@ void AtmosphereRenderer::updateShader() {
   cs::utils::replaceString(sFrag, "USE_CLOUDMAP", (mUseClouds && mCloudTexture) ? "1" : "0");
   cs::utils::replaceString(sFrag, "ENABLE_HDR", mHDRBuffer ? "1" : "0");
 
-  mAtmoShader->InitVertexShaderFromString(sVert);
-  mAtmoShader->InitFragmentShaderFromString(sFrag);
+  mAtmoShader.InitVertexShaderFromString(sVert);
+  mAtmoShader.InitFragmentShaderFromString(sFrag);
 
-  mAtmoShader->Link();
+  mAtmoShader.Link();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -420,7 +397,7 @@ bool AtmosphereRenderer::Do() {
       glm::normalize(glm::vec3(glm::inverse(mWorldTransform) * glm::vec4(mSunDirection, 0)));
 
   // set uniforms ------------------------------------------------------------
-  mAtmoShader->Bind();
+  mAtmoShader.Bind();
 
   double nearClip, farClip;
   GetVistaSystem()
@@ -430,14 +407,13 @@ bool AtmosphereRenderer::Do() {
       ->GetProjectionProperties()
       ->GetClippingRange(nearClip, farClip);
 
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uSunIntensity"), mSunIntensity);
-  mAtmoShader->SetUniform(
-      mAtmoShader->GetUniformLocation("uSunDir"), sunDir[0], sunDir[1], sunDir[2]);
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uFarClip"), (float)farClip);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uSunIntensity"), mSunIntensity);
+  mAtmoShader.SetUniform(
+      mAtmoShader.GetUniformLocation("uSunDir"), sunDir[0], sunDir[1], sunDir[2]);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uFarClip"), (float)farClip);
 
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uWaterLevel"), mWaterLevel);
-  mAtmoShader->SetUniform(
-      mAtmoShader->GetUniformLocation("uAmbientBrightness"), mAmbientBrightness);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uWaterLevel"), mWaterLevel);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uAmbientBrightness"), mAmbientBrightness);
 
   if (mHDRBuffer) {
     mHDRBuffer->doPingPong();
@@ -451,23 +427,23 @@ bool AtmosphereRenderer::Do() {
     data.mColorBuffer->Bind(GL_TEXTURE1);
   }
 
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uDepthBuffer"), 0);
-  mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uColorBuffer"), 1);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uDepthBuffer"), 0);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uColorBuffer"), 1);
 
   if (mUseClouds && mCloudTexture) {
     mCloudTexture->Bind(GL_TEXTURE3);
-    mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uCloudTexture"), 3);
-    mAtmoShader->SetUniform(mAtmoShader->GetUniformLocation("uCloudAltitude"), mCloudHeight);
+    mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uCloudTexture"), 3);
+    mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uCloudAltitude"), mCloudHeight);
   }
 
   if (mShadowMap) {
     int texUnitShadow = 4;
-    mAtmoShader->SetUniform(
-        mAtmoShader->GetUniformLocation("uShadowCascades"), (int)mShadowMap->getMaps().size());
+    mAtmoShader.SetUniform(
+        mAtmoShader.GetUniformLocation("uShadowCascades"), (int)mShadowMap->getMaps().size());
     for (int i = 0; i < mShadowMap->getMaps().size(); ++i) {
       GLint locSamplers = glGetUniformLocation(
-          mAtmoShader->GetProgram(), ("uShadowMaps[" + std::to_string(i) + "]").c_str());
-      GLint locMatrices = glGetUniformLocation(mAtmoShader->GetProgram(),
+          mAtmoShader.GetProgram(), ("uShadowMaps[" + std::to_string(i) + "]").c_str());
+      GLint locMatrices = glGetUniformLocation(mAtmoShader.GetProgram(),
           ("uShadowProjectionViewMatrices[" + std::to_string(i) + "]").c_str());
 
       mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + i);
@@ -479,19 +455,19 @@ bool AtmosphereRenderer::Do() {
   }
 
   // Why is there no set uniform for matrices???
-  GLint loc = mAtmoShader->GetUniformLocation("uMatInvMV");
+  GLint loc = mAtmoShader.GetUniformLocation("uMatInvMV");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvMV));
-  loc = mAtmoShader->GetUniformLocation("uMatInvMVP");
+  loc = mAtmoShader.GetUniformLocation("uMatInvMVP");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvMVP));
-  loc = mAtmoShader->GetUniformLocation("uMatInvP");
+  loc = mAtmoShader.GetUniformLocation("uMatInvP");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matInvP));
-  loc = mAtmoShader->GetUniformLocation("uMatMV");
+  loc = mAtmoShader.GetUniformLocation("uMatMV");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matMV));
 
   // draw --------------------------------------------------------------------
-  mQuadVAO->Bind();
+  mQuadVAO.Bind();
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  mQuadVAO->Release();
+  mQuadVAO.Release();
 
   // clean up ----------------------------------------------------------------
 
@@ -509,7 +485,7 @@ bool AtmosphereRenderer::Do() {
     mCloudTexture->Unbind(GL_TEXTURE3);
   }
 
-  mAtmoShader->Release();
+  mAtmoShader.Release();
 
   glDepthMask(GL_TRUE);
 
@@ -570,19 +546,19 @@ void AtmosphereRenderer::initData() {
   data[6] = 1;
   data[7] = -1;
 
-  mQuadVBO->Bind(GL_ARRAY_BUFFER);
-  mQuadVBO->BufferData(data.size() * sizeof(float), &(data[0]), GL_STATIC_DRAW);
-  mQuadVBO->Release();
+  mQuadVBO.Bind(GL_ARRAY_BUFFER);
+  mQuadVBO.BufferData(data.size() * sizeof(float), &(data[0]), GL_STATIC_DRAW);
+  mQuadVBO.Release();
 
   // positions
-  mQuadVAO->EnableAttributeArray(0);
-  mQuadVAO->SpecifyAttributeArrayFloat(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0, mQuadVBO);
+  mQuadVAO.EnableAttributeArray(0);
+  mQuadVAO.SpecifyAttributeArrayFloat(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0, &mQuadVBO);
 
   // create textures ---------------------------------------------------------
   for (auto const& viewport : GetVistaSystem()->GetDisplayManager()->GetViewports()) {
     GBufferData bufferData;
 
-    bufferData.mDepthBuffer = new VistaTexture(GL_TEXTURE_2D);
+    bufferData.mDepthBuffer = std::make_unique<VistaTexture>(GL_TEXTURE_2D);
     bufferData.mDepthBuffer->Bind();
     bufferData.mDepthBuffer->SetWrapS(GL_CLAMP);
     bufferData.mDepthBuffer->SetWrapT(GL_CLAMP);
@@ -590,7 +566,7 @@ void AtmosphereRenderer::initData() {
     bufferData.mDepthBuffer->SetMagFilter(GL_NEAREST);
     bufferData.mDepthBuffer->Unbind();
 
-    bufferData.mColorBuffer = new VistaTexture(GL_TEXTURE_2D);
+    bufferData.mColorBuffer = std::make_unique<VistaTexture>(GL_TEXTURE_2D);
     bufferData.mColorBuffer->Bind();
     bufferData.mColorBuffer->SetWrapS(GL_CLAMP);
     bufferData.mColorBuffer->SetWrapT(GL_CLAMP);
@@ -598,7 +574,7 @@ void AtmosphereRenderer::initData() {
     bufferData.mColorBuffer->SetMagFilter(GL_NEAREST);
     bufferData.mColorBuffer->Unbind();
 
-    mGBufferData[viewport.second] = bufferData;
+    mGBufferData.emplace(viewport.second, std::move(bufferData));
   }
 }
 

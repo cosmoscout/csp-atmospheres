@@ -106,7 +106,7 @@ void Plugin::init() {
 
     mSolarSystem->registerAnchor(atmosphere);
 
-    mAtmospheres.push_back(atmosphere);
+    mAtmospheres.emplace_back(atmosphere);
   }
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
@@ -134,7 +134,7 @@ void Plugin::init() {
       "Sets the height of the water surface relative to the planet's radius.",
       std::function([this](double value) { mProperties->mWaterLevel = value; }));
 
-  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.onChange().connect([this](bool val) {
+  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.connectAndTouch([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
         atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
@@ -144,7 +144,7 @@ void Plugin::init() {
     }
   });
 
-  mEnableHDRConnection = mGraphicsEngine->pEnableHDR.onChange().connect([this](bool val) {
+  mEnableHDRConnection = mGraphicsEngine->pEnableHDR.connectAndTouch([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
       atmosphere->getRenderer().setUseToneMapping(!val, 0.6f, 2.2f);
       if (val) {
@@ -156,13 +156,13 @@ void Plugin::init() {
   });
 
   mAmbientBrightnessConnection =
-      mGraphicsEngine->pAmbientBrightness.onChange().connect([this](float val) {
+      mGraphicsEngine->pAmbientBrightness.connectAndTouch([this](float val) {
         for (auto const& atmosphere : mAtmospheres) {
           atmosphere->getRenderer().setAmbientBrightness(val * 0.4f);
         }
       });
 
-  mProperties->mEnableLightShafts.onChange().connect([this](bool val) {
+  mProperties->mEnableLightShafts.connectAndTouch([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
         atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
@@ -184,6 +184,8 @@ void Plugin::deInit() {
     mSolarSystem->unregisterAnchor(atmosphere);
   }
 
+  mGuiManager->removeSettingsSection("Atmospheres");
+
   mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableWater");
   mGuiManager->getGui()->unregisterCallback("atmosphere.setEnableClouds");
   mGuiManager->getGui()->unregisterCallback("atmosphere.setEnable");
@@ -191,9 +193,9 @@ void Plugin::deInit() {
   mGuiManager->getGui()->unregisterCallback("atmosphere.setQuality");
   mGuiManager->getGui()->unregisterCallback("atmosphere.setWaterLevel");
 
-  mGraphicsEngine->pEnableShadows.onChange().disconnect(mEnableShadowsConnection);
-  mGraphicsEngine->pEnableHDR.onChange().disconnect(mEnableHDRConnection);
-  mGraphicsEngine->pAmbientBrightness.onChange().disconnect(mAmbientBrightnessConnection);
+  mGraphicsEngine->pEnableShadows.disconnect(mEnableShadowsConnection);
+  mGraphicsEngine->pEnableHDR.disconnect(mEnableHDRConnection);
+  mGraphicsEngine->pAmbientBrightness.disconnect(mAmbientBrightnessConnection);
 
   spdlog::info("Unloading done.");
 }

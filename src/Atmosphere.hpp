@@ -34,7 +34,7 @@ class Atmosphere : public cs::scene::CelestialObject {
  private:
   AtmosphereRenderer                  mRenderer;
   std::shared_ptr<Plugin::Properties> mProperties;
-  VistaOpenGLNode*                    mAtmosphereNode;
+  std::unique_ptr<VistaOpenGLNode>    mAtmosphereNode;
 };
 
 } // namespace csp::atmospheres

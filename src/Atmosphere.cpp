@@ -52,17 +52,17 @@ Atmosphere::Atmosphere(std::shared_ptr<Plugin::Properties> const& pProperties,
   mRenderer.setRayleighAnisotropy(settings.mRayleighAnisotropy);
 
   VistaSceneGraph* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
-  mAtmosphereNode      = pSG->NewOpenGLNode(pSG->GetRoot(), &mRenderer);
+  mAtmosphereNode.reset(pSG->NewOpenGLNode(pSG->GetRoot(), &mRenderer));
   mAtmosphereNode->SetIsEnabled(false);
   VistaOpenSGMaterialTools::SetSortKeyOnSubtree(
-      mAtmosphereNode, static_cast<int>(cs::utils::DrawOrder::eAtmospheres));
+      mAtmosphereNode.get(), static_cast<int>(cs::utils::DrawOrder::eAtmospheres));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Atmosphere::~Atmosphere() {
   VistaSceneGraph* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
-  pSG->GetRoot()->DisconnectChild(mAtmosphereNode);
+  pSG->GetRoot()->DisconnectChild(mAtmosphereNode.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
