@@ -65,6 +65,8 @@ class Plugin : public cs::core::PluginBase {
   int mEnableShadowsConnection     = -1;
   int mEnableHDRConnection         = -1;
   int mAmbientBrightnessConnection = -1;
+  int mOnLoadConnection            = -1;
+  int mOnSaveConnection            = -1;
 };
 
 } // namespace csp::atmospheres

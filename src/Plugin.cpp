@@ -105,8 +105,8 @@ void Plugin::init() {
 
   spdlog::info("Loading plugin...");
 
-  mAllSettings->onLoad().connect([this]() { onLoad(); });
-  mAllSettings->onSave().connect(
+  mOnLoadConnection = mAllSettings->onLoad().connect([this]() { onLoad(); });
+  mOnSaveConnection = mAllSettings->onSave().connect(
       [this]() { to_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings); });
 
   mGuiManager->addSettingsSectionToSideBarFromHTML(
@@ -205,6 +205,8 @@ void Plugin::deInit() {
   mAllSettings->mGraphics.pEnableShadows.disconnect(mEnableShadowsConnection);
   mAllSettings->mGraphics.pEnableHDR.disconnect(mEnableHDRConnection);
   mAllSettings->mGraphics.pAmbientBrightness.disconnect(mAmbientBrightnessConnection);
+  mAllSettings->onLoad().disconnect(mOnLoadConnection);
+  mAllSettings->onSave().disconnect(mOnSaveConnection);
 
   spdlog::info("Unloading done.");
 }
