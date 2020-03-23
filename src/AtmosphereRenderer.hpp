@@ -35,7 +35,7 @@ namespace csp::atmospheres {
 /// very same position as your planet. Set its scale to the same size as your planet.
 class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
-  AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties);
+  AtmosphereRenderer(std::shared_ptr<Plugin::Settings> const& pSettings);
 
   /// Updates the current sun position and brightness.
   void setSun(glm::vec3 const& direction, float illuminance);
@@ -138,12 +138,12 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void initData();
   void updateShader();
 
-  std::shared_ptr<Plugin::Properties> mProperties;
-  std::shared_ptr<VistaTexture>       mCloudTexture;
-  float                               mCloudHeight    = 0.001;
-  bool                                mUseClouds      = false;
-  glm::dvec3                          mRadii          = glm::dvec3(1.0, 1.0, 1.0);
-  glm::dmat4                          mWorldTransform = glm::dmat4(1.0);
+  std::shared_ptr<Plugin::Settings> mPluginSettings;
+  std::shared_ptr<VistaTexture>     mCloudTexture;
+  float                             mCloudHeight    = 0.001;
+  bool                              mUseClouds      = false;
+  glm::dvec3                        mRadii          = glm::dvec3(1.0, 1.0, 1.0);
+  glm::dmat4                        mWorldTransform = glm::dmat4(1.0);
 
   std::shared_ptr<cs::graphics::ShadowMap> mShadowMap;
   std::shared_ptr<cs::graphics::HDRBuffer> mHDRBuffer;

@@ -22,15 +22,6 @@ class Atmosphere;
 /// for details.
 class Plugin : public cs::core::PluginBase {
  public:
-  struct Properties {
-    cs::utils::Property<bool>  mEnabled           = true;
-    cs::utils::Property<int>   mQuality           = 7;
-    cs::utils::Property<float> mWaterLevel        = 0.f;
-    cs::utils::Property<bool>  mEnableClouds      = true;
-    cs::utils::Property<bool>  mEnableLightShafts = false;
-    cs::utils::Property<bool>  mEnableWater       = false;
-  };
-
   struct Settings {
     struct Atmosphere {
       double                     mAtmosphereHeight; ///< Relative to the planets radius.
@@ -49,6 +40,13 @@ class Plugin : public cs::core::PluginBase {
     };
 
     std::map<std::string, Atmosphere> mAtmospheres;
+
+    cs::utils::DefaultProperty<bool>  mEnabled{true};
+    cs::utils::DefaultProperty<int>   mQuality{7};
+    cs::utils::DefaultProperty<float> mWaterLevel{0.f};
+    cs::utils::DefaultProperty<bool>  mEnableClouds{true};
+    cs::utils::DefaultProperty<bool>  mEnableLightShafts{false};
+    cs::utils::DefaultProperty<bool>  mEnableWater{false};
   };
 
   Plugin();
@@ -59,9 +57,10 @@ class Plugin : public cs::core::PluginBase {
   void update() override;
 
  private:
-  Settings                                 mPluginSettings;
+  void onLoad();
+
+  std::shared_ptr<Settings>                mPluginSettings;
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
-  std::shared_ptr<Properties>              mProperties;
 
   int mEnableShadowsConnection     = -1;
   int mEnableHDRConnection         = -1;

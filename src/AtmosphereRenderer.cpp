@@ -34,24 +34,24 @@
 
 namespace csp::atmospheres {
 
-AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties)
-    : mProperties(pProperties) {
+AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Settings> const& pSettings)
+    : mPluginSettings(pSettings) {
 
   initData();
 
   // scene-wide settings -----------------------------------------------------
-  mProperties->mQuality.connect([this](int val) { setPrimaryRaySteps(val); });
+  mPluginSettings->mQuality.connectAndTouch([this](int val) { setPrimaryRaySteps(val); });
 
-  mProperties->mEnableWater.connect([this](bool val) { setDrawWater(val); });
+  mPluginSettings->mEnableWater.connectAndTouch([this](bool val) { setDrawWater(val); });
 
-  mProperties->mEnableClouds.connect([this](bool val) {
+  mPluginSettings->mEnableClouds.connectAndTouch([this](bool val) {
     if (mUseClouds != val) {
       mShaderDirty = true;
       mUseClouds   = val;
     }
   });
 
-  mProperties->mWaterLevel.connect([this](float val) { setWaterLevel(val / 1000); });
+  mPluginSettings->mWaterLevel.connectAndTouch([this](float val) { setWaterLevel(val / 1000); });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
