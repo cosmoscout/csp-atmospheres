@@ -8,7 +8,6 @@
 
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
-#include "../../../src/cs-graphics/TextureLoader.hpp"
 #include "../../../src/cs-utils/utils.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaGroupNode.h>
@@ -54,8 +53,9 @@ Atmosphere::~Atmosphere() {
 
 void Atmosphere::configure(Plugin::Settings::Atmosphere const& settings) {
   if (settings.mCloudTexture) {
-    mRenderer.setCloudTexture(
-        cs::graphics::TextureLoader::loadFromFile(*settings.mCloudTexture), *settings.mCloudHeight);
+    mRenderer.setClouds(*settings.mCloudTexture, settings.mCloudHeight.value_or(0.001));
+  } else {
+    mRenderer.setClouds("", 0.0);
   }
   mRenderer.setAtmosphereHeight(settings.mAtmosphereHeight);
   mRenderer.setMieHeight(settings.mMieHeight);

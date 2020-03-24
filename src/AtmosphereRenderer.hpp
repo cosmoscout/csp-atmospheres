@@ -47,7 +47,7 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void setWorldTransform(glm::dmat4 const& transform);
 
   /// When set, the shader will draw this texture at the given altitude.
-  void setCloudTexture(std::shared_ptr<VistaTexture> const& texture, float height);
+  void setClouds(std::string const& textureFile, float height);
 
   /// When set, the shader will make lookups in order to generate light shafts.
   void setShadowMap(std::shared_ptr<cs::graphics::ShadowMap> const& pShadowMap);
@@ -139,7 +139,8 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void updateShader();
 
   std::shared_ptr<Plugin::Settings> mPluginSettings;
-  std::shared_ptr<VistaTexture>     mCloudTexture;
+  std::unique_ptr<VistaTexture>     mCloudTexture;
+  std::string                       mCloudTextureFile;
   float                             mCloudHeight    = 0.001;
   bool                              mUseClouds      = false;
   glm::dvec3                        mRadii          = glm::dvec3(1.0, 1.0, 1.0);

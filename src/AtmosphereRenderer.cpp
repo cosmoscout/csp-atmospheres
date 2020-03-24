@@ -14,6 +14,7 @@
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-graphics/Shadows.hpp"
+#include "../../../src/cs-graphics/TextureLoader.hpp"
 #include "../../../src/cs-utils/FrameTimings.hpp"
 #include "../../../src/cs-utils/utils.hpp"
 
@@ -75,14 +76,19 @@ void AtmosphereRenderer::setWorldTransform(glm::dmat4 const& transform) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setCloudTexture(
-    std::shared_ptr<VistaTexture> const& texture, float height) {
-  if (mCloudTexture != texture || mCloudHeight != height) {
-    mCloudTexture = texture;
-    mCloudHeight  = height;
-    mShaderDirty  = true;
-    mUseClouds    = texture != nullptr;
+void AtmosphereRenderer::setClouds(std::string const& textureFile, float height) {
+
+  if (mCloudTextureFile != textureFile) {
+    mCloudTextureFile = textureFile;
+    mCloudTexture.reset();
+    if (textureFile != "") {
+      mCloudTexture = cs::graphics::TextureLoader::loadFromFile(textureFile);
+    }
+    mShaderDirty = true;
+    mUseClouds   = mCloudTexture != nullptr;
   }
+
+  mCloudHeight = height;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

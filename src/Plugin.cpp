@@ -107,7 +107,7 @@ void Plugin::init() {
 
   mOnLoadConnection = mAllSettings->onLoad().connect([this]() { onLoad(); });
   mOnSaveConnection = mAllSettings->onSave().connect(
-      [this]() { to_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings); });
+      [this]() { mAllSettings->mPlugins["csp-atmospheres"] = *mPluginSettings; });
 
   mGuiManager->addSettingsSectionToSideBarFromHTML(
       "Atmospheres", "blur_circular", "../share/resources/gui/atmospheres_settings.html");
@@ -242,14 +242,32 @@ void Plugin::update() {
 void Plugin::onLoad() {
   from_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings);
 
-  // For now, we simply reload all atmospheres. This can definitely optimized by re-using existing
-  // atmospheres.
-  for (auto const& atmosphere : mAtmospheres) {
-    mSolarSystem->unregisterAnchor(atmosphere);
+  // First try to re-configure existing atmospheres.
+  for (auto& atmosphere : mAtmospheres) {
+    auto settings = mPluginSettings->mAtmospheres.find(atmosphere->getCenterName());
+    if (settings != mPluginSettings->mAtmospheres.end()) {
+      // If there are settings for this atmosphere, reconfigure it.
+      atmosphere->configure(settings->second);
+    } else {
+      // Else delete it.
+      mSolarSystem->unregisterAnchor(atmosphere);
+      atmosphere.reset();
+    }
   }
-  mAtmospheres.clear();
 
+  // Then remove all which have been set to null.
+  mAtmospheres.erase(
+      std::remove_if(mAtmospheres.begin(), mAtmospheres.end(), [](auto& p) { return !p; }),
+      mAtmospheres.end());
+
+  // Then add new atmospheres.
   for (auto const& atmoSettings : mPluginSettings->mAtmospheres) {
+    auto existing = std::find_if(mAtmospheres.begin(), mAtmospheres.end(),
+        [&](auto val) { return val->getCenterName() == atmoSettings.first; });
+    if (existing != mAtmospheres.end()) {
+      continue;
+    }
+
     auto anchor = mAllSettings->mAnchors.find(atmoSettings.first);
 
     if (anchor == mAllSettings->mAnchors.end()) {
