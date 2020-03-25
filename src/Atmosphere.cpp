@@ -32,8 +32,8 @@ Atmosphere::Atmosphere(std::shared_ptr<Plugin::Properties> const& pProperties,
   pVisibleRadius = radii[0];
 
   if (settings.mCloudTexture) {
-    mRenderer.setCloudTexture(
-        cs::graphics::TextureLoader::loadFromFile(*settings.mCloudTexture), *settings.mCloudHeight);
+    mRenderer.setCloudTexture(cs::graphics::TextureLoader::loadFromFile(*settings.mCloudTexture),
+        static_cast<float>(*settings.mCloudHeight));
   }
 
   mRenderer.setRadii(radii);
