@@ -444,7 +444,7 @@ bool AtmosphereRenderer::Do() {
     int texUnitShadow = 4;
     mAtmoShader.SetUniform(
         mAtmoShader.GetUniformLocation("uShadowCascades"), (int)mShadowMap->getMaps().size());
-    for (int i = 0; i < mShadowMap->getMaps().size(); ++i) {
+    for (size_t i = 0; i < mShadowMap->getMaps().size(); ++i) {
       GLint locSamplers = glGetUniformLocation(
           mAtmoShader.GetProgram(), ("uShadowMaps[" + std::to_string(i) + "]").c_str());
       GLint locMatrices = glGetUniformLocation(mAtmoShader.GetProgram(),
