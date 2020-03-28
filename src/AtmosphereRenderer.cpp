@@ -450,8 +450,8 @@ bool AtmosphereRenderer::Do() {
       GLint locMatrices = glGetUniformLocation(mAtmoShader.GetProgram(),
           ("uShadowProjectionViewMatrices[" + std::to_string(i) + "]").c_str());
 
-      mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + i);
-      glUniform1i(locSamplers, texUnitShadow + i);
+      mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + static_cast<int>(i));
+      glUniform1i(locSamplers, texUnitShadow + static_cast<int>(i));
 
       auto mat = mShadowMap->getShadowMatrices()[i];
       glUniformMatrix4fv(locMatrices, 1, GL_FALSE, mat.GetData());
