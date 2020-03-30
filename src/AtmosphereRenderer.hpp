@@ -35,7 +35,7 @@ namespace csp::atmospheres {
 /// very same position as your planet. Set its scale to the same size as your planet.
 class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
-  AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties);
+  AtmosphereRenderer(std::shared_ptr<Plugin::Properties> pProperties);
 
   /// Updates the current sun position and brightness.
   void setSun(glm::vec3 const& direction, float illuminance);

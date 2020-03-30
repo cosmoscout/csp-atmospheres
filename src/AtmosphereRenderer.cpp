@@ -35,11 +35,12 @@
 #include <VistaTools/tinyXML/tinyxml.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <utility>
 
 namespace csp::atmospheres {
 
-AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> const& pProperties)
-    : mProperties(pProperties) {
+AtmosphereRenderer::AtmosphereRenderer(std::shared_ptr<Plugin::Properties> pProperties)
+    : mProperties(std::move(pProperties)) {
 
   initData();
 
