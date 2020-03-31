@@ -315,7 +315,8 @@ void AtmosphereRenderer::updateShader() {
   mAtmoShader = VistaGLSLShader();
 
   std::string sVert(cAtmosphereVert);
-  std::string sFrag(cAtmosphereFrag0 + cAtmosphereFrag1);
+  std::string sFrag(cAtmosphereFrag0);
+  sFrag.append(cAtmosphereFrag1);
 
   cs::utils::replaceString(sFrag, "HEIGHT_ATMO", cs::utils::toString(mAtmosphereHeight));
   cs::utils::replaceString(sFrag, "ANISOTROPY_R", cs::utils::toString(mRayleighAnisotropy));
@@ -330,16 +331,16 @@ void AtmosphereRenderer::updateShader() {
   cs::utils::replaceString(sFrag, "BETA_M_2", cs::utils::toString(mMieScattering[2]));
   cs::utils::replaceString(sFrag, "PRIMARY_RAY_STEPS", cs::utils::toString(mPrimaryRaySteps));
   cs::utils::replaceString(sFrag, "SECONDARY_RAY_STEPS", cs::utils::toString(mSecondaryRaySteps));
-  cs::utils::replaceString(sFrag, "ENABLE_TONEMAPPING", mUseToneMapping ? "1" : "0");
+  cs::utils::replaceString(sFrag, "ENABLE_TONEMAPPING", std::to_string(mUseToneMapping));
   cs::utils::replaceString(sFrag, "EXPOSURE", cs::utils::toString(mExposure));
   cs::utils::replaceString(sFrag, "GAMMA", cs::utils::toString(mGamma));
   cs::utils::replaceString(sFrag, "HEIGHT_ATMO", cs::utils::toString(mAtmosphereHeight));
-  cs::utils::replaceString(sFrag, "USE_LINEARDEPTHBUFFER", mUseLinearDepthBuffer ? "1" : "0");
-  cs::utils::replaceString(sFrag, "DRAW_SUN", mDrawSun ? "1" : "0");
-  cs::utils::replaceString(sFrag, "DRAW_WATER", mDrawWater ? "1" : "0");
-  cs::utils::replaceString(sFrag, "USE_SHADOWMAP", (mShadowMap != nullptr) ? "1" : "0");
-  cs::utils::replaceString(sFrag, "USE_CLOUDMAP", (mUseClouds && mCloudTexture) ? "1" : "0");
-  cs::utils::replaceString(sFrag, "ENABLE_HDR", mHDRBuffer ? "1" : "0");
+  cs::utils::replaceString(sFrag, "USE_LINEARDEPTHBUFFER", std::to_string(mUseLinearDepthBuffer));
+  cs::utils::replaceString(sFrag, "DRAW_SUN", std::to_string(mDrawSun));
+  cs::utils::replaceString(sFrag, "DRAW_WATER", std::to_string(mDrawWater));
+  cs::utils::replaceString(sFrag, "USE_SHADOWMAP", std::to_string(mShadowMap != nullptr));
+  cs::utils::replaceString(sFrag, "USE_CLOUDMAP", std::to_string(mUseClouds && mCloudTexture));
+  cs::utils::replaceString(sFrag, "ENABLE_HDR", std::to_string(mHDRBuffer != nullptr));
 
   mAtmoShader.InitVertexShaderFromString(sVert);
   mAtmoShader.InitFragmentShaderFromString(sFrag);
@@ -369,33 +370,33 @@ bool AtmosphereRenderer::Do() {
 
   // copy depth buffer -------------------------------------------------------
   if (!mHDRBuffer) {
-    GLint iViewport[4];
-    glGetIntegerv(GL_VIEWPORT, iViewport);
+    std::array<GLint, 4> iViewport{};
+    glGetIntegerv(GL_VIEWPORT, iViewport.data());
 
-    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto* viewport   = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
     auto const& data = mGBufferData[viewport];
 
     data.mDepthBuffer->Bind();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, iViewport[0], iViewport[1], iViewport[2],
-        iViewport[3], 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, iViewport.at(0), iViewport.at(1),
+        iViewport.at(2), iViewport.at(3), 0);
     data.mColorBuffer->Bind();
-    glCopyTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGB8, iViewport[0], iViewport[1], iViewport[2], iViewport[3], 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, iViewport.at(0), iViewport.at(1), iViewport.at(2),
+        iViewport.at(3), 0);
   }
 
   // get matrices and related values -----------------------------------------
-  GLfloat glMatMV[16];
-  glGetFloatv(GL_MODELVIEW_MATRIX, &glMatMV[0]);
-  glm::mat4 matMV(glm::make_mat4x4(glMatMV) * glm::mat4(mWorldTransform) *
-                  glm::mat4((float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
-                      (float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
-                      (float)(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0, 1));
+  std::array<GLfloat, 16> glMatMV{};
+  glGetFloatv(GL_MODELVIEW_MATRIX, glMatMV.data());
+  glm::mat4 matMV(glm::make_mat4x4(glMatMV.data()) * glm::mat4(mWorldTransform) *
+                  glm::mat4(static_cast<float>(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
+                      static_cast<float>(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0,
+                      static_cast<float>(mRadii[0] / (1.0 - mAtmosphereHeight)), 0, 0, 0, 0, 1));
 
   auto matInvMV = glm::inverse(matMV);
 
-  GLfloat glMatP[16];
-  glGetFloatv(GL_PROJECTION_MATRIX, &glMatP[0]);
-  glm::mat4 matInvP = glm::inverse(glm::make_mat4x4(glMatP));
+  std::array<GLfloat, 16> glMatP{};
+  glGetFloatv(GL_PROJECTION_MATRIX, glMatP.data());
+  glm::mat4 matInvP = glm::inverse(glm::make_mat4x4(glMatP.data()));
   glm::mat4 matInvMVP(matInvMV * matInvP);
 
   glm::vec3 sunDir =
@@ -404,7 +405,8 @@ bool AtmosphereRenderer::Do() {
   // set uniforms ------------------------------------------------------------
   mAtmoShader.Bind();
 
-  double nearClip, farClip;
+  double nearClip{};
+  double farClip{};
   GetVistaSystem()
       ->GetDisplayManager()
       ->GetCurrentRenderInfo()
@@ -415,7 +417,7 @@ bool AtmosphereRenderer::Do() {
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uSunIntensity"), mSunIntensity);
   mAtmoShader.SetUniform(
       mAtmoShader.GetUniformLocation("uSunDir"), sunDir[0], sunDir[1], sunDir[2]);
-  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uFarClip"), (float)farClip);
+  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uFarClip"), static_cast<float>(farClip));
 
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uWaterLevel"), mWaterLevel);
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uAmbientBrightness"), mAmbientBrightness);
@@ -426,7 +428,7 @@ bool AtmosphereRenderer::Do() {
     mHDRBuffer->getDepthAttachment()->Bind(GL_TEXTURE0);
     mHDRBuffer->getCurrentReadAttachment()->Bind(GL_TEXTURE1);
   } else {
-    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto* viewport   = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
     auto const& data = mGBufferData[viewport];
     data.mDepthBuffer->Bind(GL_TEXTURE0);
     data.mColorBuffer->Bind(GL_TEXTURE1);
@@ -443,15 +445,16 @@ bool AtmosphereRenderer::Do() {
 
   if (mShadowMap) {
     int texUnitShadow = 4;
-    mAtmoShader.SetUniform(
-        mAtmoShader.GetUniformLocation("uShadowCascades"), (int)mShadowMap->getMaps().size());
+    mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uShadowCascades"),
+        static_cast<int>(mShadowMap->getMaps().size()));
     for (size_t i = 0; i < mShadowMap->getMaps().size(); ++i) {
       GLint locSamplers = glGetUniformLocation(
           mAtmoShader.GetProgram(), ("uShadowMaps[" + std::to_string(i) + "]").c_str());
       GLint locMatrices = glGetUniformLocation(mAtmoShader.GetProgram(),
           ("uShadowProjectionViewMatrices[" + std::to_string(i) + "]").c_str());
 
-      mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + static_cast<int>(i));
+      mShadowMap->getMaps()[i]->Bind(
+          static_cast<GLenum>(GL_TEXTURE0) + texUnitShadow + static_cast<int>(i));
       glUniform1i(locSamplers, texUnitShadow + static_cast<int>(i));
 
       auto mat = mShadowMap->getShadowMatrices()[i];
@@ -480,7 +483,7 @@ bool AtmosphereRenderer::Do() {
     mHDRBuffer->getDepthAttachment()->Unbind(GL_TEXTURE0);
     mHDRBuffer->getCurrentReadAttachment()->Unbind(GL_TEXTURE1);
   } else {
-    auto viewport    = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
+    auto* viewport   = GetVistaSystem()->GetDisplayManager()->GetCurrentRenderInfo()->m_pViewport;
     auto const& data = mGBufferData[viewport];
     data.mDepthBuffer->Unbind(GL_TEXTURE0);
     data.mColorBuffer->Unbind(GL_TEXTURE1);
@@ -508,17 +511,18 @@ bool AtmosphereRenderer::Do() {
   glm::vec3 vCameraToPlanet = glm::normalize(vCamera - vPlanet);
 
   // [planet surface ... 5x atmosphere boundary] -> [0 ... 1]
-  float fHeightInAtmosphere = (float)std::min(1.0,
-      std::max(0.0, (glm::length(vCamera) - (1.f - mAtmosphereHeight)) / (mAtmosphereHeight * 5)));
+  float fHeightInAtmosphere = static_cast<float>(std::min(1.0,
+      std::max(0.0, (glm::length(vCamera) - (1.F - mAtmosphereHeight)) / (mAtmosphereHeight * 5))));
 
   // [noon ... midnight] -> [1 ... -1]
   float fDaySide = glm::dot(vCameraToPlanet, sunDir);
 
   // limit brightness when on night side (also in dusk an dawn time)
-  float fBrightnessOnSurface = std::pow(std::min(1.f, std::max(0.f, fDaySide + 1.f)), 50.f);
+  float const exponent       = 50.F;
+  float fBrightnessOnSurface = std::pow(std::min(1.F, std::max(0.F, fDaySide + 1.F)), exponent);
 
   // reduce brightness in outer space
-  mApproximateBrightness = (1.f - fHeightInAtmosphere) * fBrightnessOnSurface;
+  mApproximateBrightness = (1.F - fHeightInAtmosphere) * fBrightnessOnSurface;
 
   return true;
 }
@@ -526,13 +530,13 @@ bool AtmosphereRenderer::Do() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool AtmosphereRenderer::GetBoundingBox(VistaBoundingBox& bb) {
-  // Boundingbox is computed by translation an edge points
-  float fMin[3] = {(float)(-1.0 / (1.0 - mAtmosphereHeight)),
-      (float)(-1.0 / (1.0 - mAtmosphereHeight)), (float)(-1.0 / (1.0 - mAtmosphereHeight))};
-  float fMax[3] = {(float)(1.0 / (1.0 - mAtmosphereHeight)),
-      (float)(1.0 / (1.0 - mAtmosphereHeight)), (float)(1.0 / (1.0 - mAtmosphereHeight))};
+  auto const extend = static_cast<float>(1.0 / (1.0 - mAtmosphereHeight));
 
-  bb.SetBounds(fMin, fMax);
+  // Boundingbox is computed by translation an edge points
+  std::array<float, 3> const fMin = {-extend, -extend, -extend};
+  std::array<float, 3> const fMax = {extend, extend, extend};
+
+  bb.SetBounds(fMin.data(), fMax.data());
 
   return true;
 }
@@ -541,18 +545,10 @@ bool AtmosphereRenderer::GetBoundingBox(VistaBoundingBox& bb) {
 
 void AtmosphereRenderer::initData() {
   // create quad -------------------------------------------------------------
-  std::vector<float> data(8);
-  data[0] = -1;
-  data[1] = 1;
-  data[2] = 1;
-  data[3] = 1;
-  data[4] = -1;
-  data[5] = -1;
-  data[6] = 1;
-  data[7] = -1;
+  std::array<float, 8> const data{-1, 1, 1, 1, -1, -1, 1, -1};
 
   mQuadVBO.Bind(GL_ARRAY_BUFFER);
-  mQuadVBO.BufferData(data.size() * sizeof(float), &(data[0]), GL_STATIC_DRAW);
+  mQuadVBO.BufferData(data.size() * sizeof(float), data.data(), GL_STATIC_DRAW);
   mQuadVBO.Release();
 
   // positions

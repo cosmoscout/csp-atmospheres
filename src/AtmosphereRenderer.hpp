@@ -185,10 +185,11 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   float mExposure             = 0.6f;
   float mGamma                = 2.2f;
 
-  static const std::string cAtmosphereVert;
-  static const std::string cAtmosphereFrag0;
-  static const std::string cAtmosphereFrag1;
+  static const char* cAtmosphereVert;
+  static const char* cAtmosphereFrag0;
+  static const char* cAtmosphereFrag1;
 };
+
 
 } // namespace csp::atmospheres
 
