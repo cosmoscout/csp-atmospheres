@@ -190,7 +190,6 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   static const char* cAtmosphereFrag1;
 };
 
-
 } // namespace csp::atmospheres
 
 #endif // CSP_ATMOSPHERE_RENDERER_HPP
