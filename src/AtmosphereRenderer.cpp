@@ -7,7 +7,11 @@
 #include "Atmosphere.hpp"
 
 #ifdef _WIN32
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
 #include <Windows.h>
 #endif
 
@@ -446,14 +450,14 @@ bool AtmosphereRenderer::Do() {
     int texUnitShadow = 4;
     mAtmoShader.SetUniform(
         mAtmoShader.GetUniformLocation("uShadowCascades"), (int)mShadowMap->getMaps().size());
-    for (int i = 0; i < mShadowMap->getMaps().size(); ++i) {
+    for (size_t i = 0; i < mShadowMap->getMaps().size(); ++i) {
       GLint locSamplers = glGetUniformLocation(
           mAtmoShader.GetProgram(), ("uShadowMaps[" + std::to_string(i) + "]").c_str());
       GLint locMatrices = glGetUniformLocation(mAtmoShader.GetProgram(),
           ("uShadowProjectionViewMatrices[" + std::to_string(i) + "]").c_str());
 
-      mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + i);
-      glUniform1i(locSamplers, texUnitShadow + i);
+      mShadowMap->getMaps()[i]->Bind((GLenum)GL_TEXTURE0 + texUnitShadow + static_cast<int>(i));
+      glUniform1i(locSamplers, texUnitShadow + static_cast<int>(i));
 
       auto mat = mShadowMap->getShadowMatrices()[i];
       glUniformMatrix4fv(locMatrices, 1, GL_FALSE, mat.GetData());

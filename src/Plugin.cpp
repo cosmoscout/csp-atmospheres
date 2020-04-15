@@ -132,11 +132,12 @@ void Plugin::init() {
 
   mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
       "Higher values create a more realistic atmosphere.",
-      std::function([this](double value) { mPluginSettings->mQuality = value; }));
+      std::function([this](double value) { mPluginSettings->mQuality = static_cast<int>(value); }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
       "Sets the height of the water surface relative to the planet's radius.",
-      std::function([this](double value) { mPluginSettings->mWaterLevel = value; }));
+      std::function(
+          [this](double value) { mPluginSettings->mWaterLevel = static_cast<float>(value); }));
 
   mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
@@ -233,7 +234,7 @@ void Plugin::update() {
 
     auto sunDirection = mSolarSystem->getSunDirection(atmosphere->getWorldTransform()[3]);
 
-    atmosphere->getRenderer().setSun(sunDirection, sunIlluminance);
+    atmosphere->getRenderer().setSun(sunDirection, static_cast<float>(sunIlluminance));
   }
 }
 

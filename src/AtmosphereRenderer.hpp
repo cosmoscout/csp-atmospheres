@@ -141,7 +141,7 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   std::shared_ptr<Plugin::Settings> mPluginSettings;
   std::unique_ptr<VistaTexture>     mCloudTexture;
   std::string                       mCloudTextureFile;
-  float                             mCloudHeight    = 0.001;
+  float                             mCloudHeight    = 0.001F;
   bool                              mUseClouds      = false;
   glm::dvec3                        mRadii          = glm::dvec3(1.0, 1.0, 1.0);
   glm::dmat4                        mWorldTransform = glm::dmat4(1.0);
@@ -163,8 +163,8 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   bool      mShaderDirty       = true;
   bool      mDrawSun           = true;
   bool      mDrawWater         = false;
-  float     mWaterLevel        = 0.0;
-  float     mAmbientBrightness = 0.2;
+  float     mWaterLevel        = 0.0f;
+  float     mAmbientBrightness = 0.2f;
   double    mAtmosphereHeight  = 1.0;
   int       mPrimaryRaySteps   = 15;
   int       mSecondaryRaySteps = 4;
@@ -179,12 +179,12 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   glm::vec3 mRayleighScattering = glm::vec3(1, 1, 1);
   double    mRayleighAnisotropy = 0.0;
 
-  float mApproximateBrightness = 0.0;
+  float mApproximateBrightness = 0.0f;
 
   bool  mUseLinearDepthBuffer = false;
   bool  mUseToneMapping       = true;
-  float mExposure             = 0.6;
-  float mGamma                = 2.2;
+  float mExposure             = 0.6f;
+  float mGamma                = 2.2f;
 
   static const std::string cAtmosphereVert;
   static const std::string cAtmosphereFrag0;
