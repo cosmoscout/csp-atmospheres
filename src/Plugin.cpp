@@ -244,7 +244,7 @@ void Plugin::onLoad() {
   from_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings);
 
   // First try to re-configure existing atmospheres.
-  for (auto& atmosphere : mAtmospheres) {
+  for (auto&& atmosphere : mAtmospheres) {
     auto settings = mPluginSettings->mAtmospheres.find(atmosphere->getCenterName());
     if (settings != mPluginSettings->mAtmospheres.end()) {
       // If there are settings for this atmosphere, reconfigure it.
@@ -258,7 +258,7 @@ void Plugin::onLoad() {
 
   // Then remove all which have been set to null.
   mAtmospheres.erase(
-      std::remove_if(mAtmospheres.begin(), mAtmospheres.end(), [](auto& p) { return !p; }),
+      std::remove_if(mAtmospheres.begin(), mAtmospheres.end(), [](auto const& p) { return !p; }),
       mAtmospheres.end());
 
   // Then add new atmospheres.
