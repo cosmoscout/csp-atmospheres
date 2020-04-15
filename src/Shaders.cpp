@@ -8,7 +8,7 @@
 
 namespace csp::atmospheres {
 
-const std::string AtmosphereRenderer::cAtmosphereVert = R"(
+const char* AtmosphereRenderer::cAtmosphereVert = R"(
   #version 330
 
   // inputs
@@ -46,7 +46,7 @@ const std::string AtmosphereRenderer::cAtmosphereVert = R"(
 )";
 
 // needs to be splitted because MSVC doesn't like long strings
-const std::string AtmosphereRenderer::cAtmosphereFrag0 = R"(
+const char* AtmosphereRenderer::cAtmosphereFrag0 = R"(
   #version 330
 
   // inputs
@@ -363,7 +363,7 @@ const std::string AtmosphereRenderer::cAtmosphereFrag0 = R"(
   )";
 
 // needs to be splitted because MSVC doesn't like long strings
-const std::string AtmosphereRenderer::cAtmosphereFrag1 = R"(
+const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
 
   // returns the color of the incoming light for any direction and position
   // The ray is defined by its origin and direction. The two points are defined

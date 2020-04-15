@@ -27,7 +27,7 @@ EXPORT_FN cs::core::PluginBase* create() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 EXPORT_FN void destroy(cs::core::PluginBase* pluginBase) {
-  delete pluginBase;
+  delete pluginBase; // NOLINT(cppcoreguidelines-owning-memory)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,8 @@ void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
 
   o.mCloudHeight = cs::core::parseOptional<double>("cloudHeight", j);
   if (!o.mCloudHeight) {
-    o.mCloudHeight = 0.001;
+    double const permille = 0.001;
+    o.mCloudHeight        = permille;
   }
 }
 
@@ -135,7 +136,7 @@ void Plugin::init() {
       std::function(
           [this](double value) { mProperties->mWaterLevel = static_cast<float>(value); }));
 
-  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.connectAndTouch([this](bool val) {
+  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.connectAndTouch([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
         atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
@@ -147,7 +148,9 @@ void Plugin::init() {
 
   mEnableHDRConnection = mGraphicsEngine->pEnableHDR.connectAndTouch([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
-      atmosphere->getRenderer().setUseToneMapping(!val, 0.6f, 2.2f);
+      float const exposure = 0.6F;
+      float const gamma    = 2.2F;
+      atmosphere->getRenderer().setUseToneMapping(!val, exposure, gamma);
       if (val) {
         atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
       } else {
@@ -159,11 +162,12 @@ void Plugin::init() {
   mAmbientBrightnessConnection =
       mGraphicsEngine->pAmbientBrightness.connectAndTouch([this](float val) {
         for (auto const& atmosphere : mAtmospheres) {
-          atmosphere->getRenderer().setAmbientBrightness(val * 0.4f);
+          float const ambientBrightnessModifier = 0.4F;
+          atmosphere->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
         }
       });
 
-  mProperties->mEnableLightShafts.connectAndTouch([this](bool val) {
+  mProperties->mEnableLightShafts.connectAndTouch([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
         atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
@@ -204,11 +208,11 @@ void Plugin::deInit() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::update() {
-  float fIntensity = 1.f;
+  float fIntensity = 1.F;
   for (auto const& atmosphere : mAtmospheres) {
     if (mProperties->mEnabled.get()) {
       float brightness = atmosphere->getRenderer().getApproximateSceneBrightness();
-      fIntensity *= (1.f - brightness);
+      fIntensity *= (1.F - brightness);
     }
   }
 
