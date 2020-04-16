@@ -51,8 +51,6 @@ class Plugin : public cs::core::PluginBase {
     std::map<std::string, Atmosphere> mAtmospheres;
   };
 
-  Plugin();
-
   void init() override;
   void deInit() override;
 
@@ -61,7 +59,7 @@ class Plugin : public cs::core::PluginBase {
  private:
   Settings                                 mPluginSettings;
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
-  std::shared_ptr<Properties>              mProperties;
+  std::shared_ptr<Properties>              mProperties = std::make_shared<Properties>();
 
   int mEnableShadowsConnection     = -1;
   int mEnableHDRConnection         = -1;

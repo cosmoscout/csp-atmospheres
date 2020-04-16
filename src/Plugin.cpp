@@ -6,13 +6,13 @@
 
 #include "Plugin.hpp"
 
-#include "Atmosphere.hpp"
-#include "AtmosphereRenderer.hpp"
-
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-utils/logger.hpp"
+#include "Atmosphere.hpp"
+#include "AtmosphereRenderer.hpp"
+#include "logger.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -69,18 +69,9 @@ void from_json(const nlohmann::json& j, Plugin::Settings& o) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Plugin::Plugin()
-    : mProperties(std::make_shared<Properties>()) {
-
-  // Create default logger for this plugin.
-  spdlog::set_default_logger(cs::utils::logger::createLogger("csp-atmospheres"));
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void Plugin::init() {
 
-  spdlog::info("Loading plugin...");
+  logger().info("Loading plugin...");
 
   mPluginSettings = mAllSettings->mPlugins.at("csp-atmospheres");
 
@@ -177,13 +168,13 @@ void Plugin::init() {
     }
   });
 
-  spdlog::info("Loading done.");
+  logger().info("Loading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::deInit() {
-  spdlog::info("Unloading plugin...");
+  logger().info("Unloading plugin...");
 
   for (auto const& atmosphere : mAtmospheres) {
     mSolarSystem->unregisterAnchor(atmosphere);
@@ -202,7 +193,7 @@ void Plugin::deInit() {
   mGraphicsEngine->pEnableHDR.disconnect(mEnableHDRConnection);
   mGraphicsEngine->pAmbientBrightness.disconnect(mAmbientBrightnessConnection);
 
-  spdlog::info("Unloading done.");
+  logger().info("Unloading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
