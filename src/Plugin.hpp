@@ -24,19 +24,19 @@ class Plugin : public cs::core::PluginBase {
  public:
   struct Settings {
     struct Atmosphere {
-      double                     mAtmosphereHeight; ///< Relative to the planets radius.
-      double                     mMieHeight;
-      double                     mMieScatteringR;
-      double                     mMieScatteringG;
-      double                     mMieScatteringB;
-      double                     mMieAnisotropy;
-      double                     mRayleighHeight;
-      double                     mRayleighScatteringR;
-      double                     mRayleighScatteringG;
-      double                     mRayleighScatteringB;
-      double                     mRayleighAnisotropy;
+      float                      mAtmosphereHeight; ///< Relative to the planets radius.
+      float                      mMieHeight;
+      float                      mMieScatteringR;
+      float                      mMieScatteringG;
+      float                      mMieScatteringB;
+      float                      mMieAnisotropy;
+      float                      mRayleighHeight;
+      float                      mRayleighScatteringR;
+      float                      mRayleighScatteringG;
+      float                      mRayleighScatteringB;
+      float                      mRayleighAnisotropy;
       std::optional<std::string> mCloudTexture; ///< Path to the cloud texture.
-      std::optional<double>      mCloudHeight;  ///< Relative to the planets radius.
+      std::optional<float>       mCloudHeight;  ///< Relative to the planets radius.
     };
 
     std::map<std::string, Atmosphere> mAtmospheres;

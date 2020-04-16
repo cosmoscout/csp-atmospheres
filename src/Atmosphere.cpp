@@ -53,9 +53,9 @@ Atmosphere::~Atmosphere() {
 
 void Atmosphere::configure(Plugin::Settings::Atmosphere const& settings) {
   if (settings.mCloudTexture) {
-    mRenderer.setClouds(*settings.mCloudTexture, settings.mCloudHeight.value_or(0.001));
+    mRenderer.setClouds(*settings.mCloudTexture, settings.mCloudHeight.value_or(0.001F));
   } else {
-    mRenderer.setClouds("", 0.0);
+    mRenderer.setClouds("", 0.0F);
   }
   mRenderer.setAtmosphereHeight(settings.mAtmosphereHeight);
   mRenderer.setMieHeight(settings.mMieHeight);
