@@ -7,11 +7,6 @@
 #include "Atmosphere.hpp"
 
 #ifdef _WIN32
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include <Windows.h>
 #endif
 
@@ -23,7 +18,6 @@
 #include "../../../src/cs-utils/utils.hpp"
 
 #include <VistaKernel/DisplayManager/VistaDisplayManager.h>
-#include <VistaKernel/DisplayManager/VistaProjection.h>
 #include <VistaKernel/DisplayManager/VistaViewport.h>
 #include <VistaKernel/GraphicsManager/VistaGeometryFactory.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -148,26 +142,26 @@ void AtmosphereRenderer::setSecondaryRaySteps(int iValue) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AtmosphereRenderer::getAtmosphereHeight() const {
+float AtmosphereRenderer::getAtmosphereHeight() const {
   return mAtmosphereHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setAtmosphereHeight(double dValue) {
+void AtmosphereRenderer::setAtmosphereHeight(float dValue) {
   mAtmosphereHeight = dValue;
   mShaderDirty      = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AtmosphereRenderer::getMieHeight() const {
+float AtmosphereRenderer::getMieHeight() const {
   return mMieHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setMieHeight(double dValue) {
+void AtmosphereRenderer::setMieHeight(float dValue) {
   mMieHeight   = dValue;
   mShaderDirty = true;
 }
@@ -187,26 +181,26 @@ void AtmosphereRenderer::setMieScattering(const glm::vec3& vValue) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AtmosphereRenderer::getMieAnisotropy() const {
+float AtmosphereRenderer::getMieAnisotropy() const {
   return mMieAnisotropy;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setMieAnisotropy(double dValue) {
+void AtmosphereRenderer::setMieAnisotropy(float dValue) {
   mMieAnisotropy = dValue;
   mShaderDirty   = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AtmosphereRenderer::getRayleighHeight() const {
+float AtmosphereRenderer::getRayleighHeight() const {
   return mRayleighHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setRayleighHeight(double dValue) {
+void AtmosphereRenderer::setRayleighHeight(float dValue) {
   mRayleighHeight = dValue;
   mShaderDirty    = true;
 }
@@ -226,13 +220,13 @@ void AtmosphereRenderer::setRayleighScattering(const glm::vec3& vValue) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AtmosphereRenderer::getRayleighAnisotropy() const {
+float AtmosphereRenderer::getRayleighAnisotropy() const {
   return mRayleighAnisotropy;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void AtmosphereRenderer::setRayleighAnisotropy(double dValue) {
+void AtmosphereRenderer::setRayleighAnisotropy(float dValue) {
   mRayleighAnisotropy = dValue;
   mShaderDirty        = true;
 }
@@ -411,19 +405,11 @@ bool AtmosphereRenderer::Do() {
   // set uniforms ------------------------------------------------------------
   mAtmoShader.Bind();
 
-  double nearClip{};
-  double farClip{};
-  GetVistaSystem()
-      ->GetDisplayManager()
-      ->GetCurrentRenderInfo()
-      ->m_pViewport->GetProjection()
-      ->GetProjectionProperties()
-      ->GetClippingRange(nearClip, farClip);
-
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uSunIntensity"), mSunIntensity);
   mAtmoShader.SetUniform(
       mAtmoShader.GetUniformLocation("uSunDir"), sunDir[0], sunDir[1], sunDir[2]);
-  mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uFarClip"), static_cast<float>(farClip));
+  mAtmoShader.SetUniform(
+      mAtmoShader.GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
 
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uWaterLevel"), mWaterLevel);
   mAtmoShader.SetUniform(mAtmoShader.GetUniformLocation("uAmbientBrightness"), mAmbientBrightness);
@@ -517,8 +503,8 @@ bool AtmosphereRenderer::Do() {
   glm::vec3 vCameraToPlanet = glm::normalize(vCamera - vPlanet);
 
   // [planet surface ... 5x atmosphere boundary] -> [0 ... 1]
-  float fHeightInAtmosphere = static_cast<float>(std::min(1.0,
-      std::max(0.0, (glm::length(vCamera) - (1.F - mAtmosphereHeight)) / (mAtmosphereHeight * 5))));
+  float fHeightInAtmosphere = std::min(1.0F,
+      std::max(0.0F, (glm::length(vCamera) - (1.F - mAtmosphereHeight)) / (mAtmosphereHeight * 5)));
 
   // [noon ... midnight] -> [1 ... -1]
   float fDaySide = glm::dot(vCameraToPlanet, sunDir);
