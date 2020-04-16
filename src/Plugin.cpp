@@ -6,13 +6,13 @@
 
 #include "Plugin.hpp"
 
-#include "Atmosphere.hpp"
-#include "AtmosphereRenderer.hpp"
-
 #include "../../../src/cs-core/GraphicsEngine.hpp"
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-utils/logger.hpp"
+#include "Atmosphere.hpp"
+#include "AtmosphereRenderer.hpp"
+#include "logger.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLNode.h>
 #include <VistaKernel/GraphicsManager/VistaSceneGraph.h>
@@ -27,7 +27,7 @@ EXPORT_FN cs::core::PluginBase* create() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 EXPORT_FN void destroy(cs::core::PluginBase* pluginBase) {
-  delete pluginBase;
+  delete pluginBase; // NOLINT(cppcoreguidelines-owning-memory)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,18 +92,9 @@ void to_json(nlohmann::json& j, Plugin::Settings const& o) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Plugin::Plugin()
-    : mPluginSettings(std::make_shared<Settings>()) {
-
-  // Create default logger for this plugin.
-  spdlog::set_default_logger(cs::utils::logger::createLogger("csp-atmospheres"));
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void Plugin::init() {
 
-  spdlog::info("Loading plugin...");
+  logger().info("Loading plugin...");
 
   mOnLoadConnection = mAllSettings->onLoad().connect([this]() { onLoad(); });
   mOnSaveConnection = mAllSettings->onSave().connect(
@@ -139,7 +130,7 @@ void Plugin::init() {
       std::function(
           [this](double value) { mPluginSettings->mWaterLevel = static_cast<float>(value); }));
 
-  mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool val) {
+  mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mAllSettings->mGraphics.pEnableShadows.get() &&
           mPluginSettings->mEnableLightShafts.get()) {
@@ -152,7 +143,9 @@ void Plugin::init() {
 
   mEnableHDRConnection = mAllSettings->mGraphics.pEnableHDR.connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
-      atmosphere->getRenderer().setUseToneMapping(!val, 0.6f, 2.2f);
+      float const exposure = 0.6F;
+      float const gamma    = 2.2F;
+      atmosphere->getRenderer().setUseToneMapping(!val, exposure, gamma);
       if (val) {
         atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
       } else {
@@ -164,11 +157,12 @@ void Plugin::init() {
   mAmbientBrightnessConnection =
       mAllSettings->mGraphics.pAmbientBrightness.connect([this](float val) {
         for (auto const& atmosphere : mAtmospheres) {
-          atmosphere->getRenderer().setAmbientBrightness(val * 0.4f);
+          float const ambientBrightnessModifier = 0.4F;
+          atmosphere->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
         }
       });
 
-  mPluginSettings->mEnableLightShafts.connect([this](bool val) {
+  mPluginSettings->mEnableLightShafts.connect([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
       if (mAllSettings->mGraphics.pEnableShadows.get() &&
           mPluginSettings->mEnableLightShafts.get()) {
@@ -182,13 +176,13 @@ void Plugin::init() {
   // Load settings.
   onLoad();
 
-  spdlog::info("Loading done.");
+  logger().info("Loading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::deInit() {
-  spdlog::info("Unloading plugin...");
+  logger().info("Unloading plugin...");
 
   for (auto const& atmosphere : mAtmospheres) {
     mSolarSystem->unregisterAnchor(atmosphere);
@@ -209,17 +203,17 @@ void Plugin::deInit() {
   mAllSettings->onLoad().disconnect(mOnLoadConnection);
   mAllSettings->onSave().disconnect(mOnSaveConnection);
 
-  spdlog::info("Unloading done.");
+  logger().info("Unloading done.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::update() {
-  float fIntensity = 1.f;
+  float fIntensity = 1.F;
   for (auto const& atmosphere : mAtmospheres) {
     if (mPluginSettings->mEnabled.get()) {
       float brightness = atmosphere->getRenderer().getApproximateSceneBrightness();
-      fIntensity *= (1.f - brightness);
+      fIntensity *= (1.F - brightness);
     }
   }
 

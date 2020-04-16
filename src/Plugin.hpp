@@ -49,8 +49,6 @@ class Plugin : public cs::core::PluginBase {
     cs::utils::DefaultProperty<bool>  mEnableWater{false};
   };
 
-  Plugin();
-
   void init() override;
   void deInit() override;
 
@@ -59,7 +57,7 @@ class Plugin : public cs::core::PluginBase {
  private:
   void onLoad();
 
-  std::shared_ptr<Settings>                mPluginSettings;
+  std::shared_ptr<Settings>                mPluginSettings = std::make_shared<Settings>();
   std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
 
   int mEnableShadowsConnection     = -1;

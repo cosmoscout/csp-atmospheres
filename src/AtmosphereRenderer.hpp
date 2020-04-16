@@ -11,18 +11,16 @@
 #include "Plugin.hpp"
 
 #include <VistaBase/VistaVectorMath.h>
+#include <VistaKernel/DisplayManager/VistaViewport.h>
 #include <VistaKernel/GraphicsManager/VistaOpenGLDraw.h>
 #include <VistaOGLExt/VistaBufferObject.h>
 #include <VistaOGLExt/VistaGLSLShader.h>
+#include <VistaOGLExt/VistaTexture.h>
 #include <VistaOGLExt/VistaVertexArrayObject.h>
 
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
-
-class VistaViewport;
-class VistaTexture;
-class VistaOpenGLNode;
 
 namespace cs::graphics {
 class ShadowMap;
@@ -35,7 +33,7 @@ namespace csp::atmospheres {
 /// very same position as your planet. Set its scale to the same size as your planet.
 class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
-  AtmosphereRenderer(std::shared_ptr<Plugin::Settings> const& pSettings);
+  AtmosphereRenderer(std::shared_ptr<Plugin::Settings> settings);
 
   /// Updates the current sun position and brightness.
   void setSun(glm::vec3 const& direction, float illuminance);
@@ -163,12 +161,12 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   bool      mShaderDirty       = true;
   bool      mDrawSun           = true;
   bool      mDrawWater         = false;
-  float     mWaterLevel        = 0.0f;
-  float     mAmbientBrightness = 0.2f;
+  float     mWaterLevel        = 0.0F;
+  float     mAmbientBrightness = 0.2F;
   double    mAtmosphereHeight  = 1.0;
   int       mPrimaryRaySteps   = 15;
   int       mSecondaryRaySteps = 4;
-  float     mSunIntensity      = 1.f;
+  float     mSunIntensity      = 1.F;
   glm::vec3 mSunDirection      = glm::vec3(1, 0, 0);
 
   double    mMieHeight     = 0.0;
@@ -179,16 +177,16 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   glm::vec3 mRayleighScattering = glm::vec3(1, 1, 1);
   double    mRayleighAnisotropy = 0.0;
 
-  float mApproximateBrightness = 0.0f;
+  float mApproximateBrightness = 0.0F;
 
   bool  mUseLinearDepthBuffer = false;
   bool  mUseToneMapping       = true;
-  float mExposure             = 0.6f;
-  float mGamma                = 2.2f;
+  float mExposure             = 0.6F;
+  float mGamma                = 2.2F;
 
-  static const std::string cAtmosphereVert;
-  static const std::string cAtmosphereFrag0;
-  static const std::string cAtmosphereFrag1;
+  static const char* cAtmosphereVert;
+  static const char* cAtmosphereFrag0;
+  static const char* cAtmosphereFrag1;
 };
 
 } // namespace csp::atmospheres
