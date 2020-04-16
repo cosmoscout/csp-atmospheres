@@ -14,7 +14,7 @@ namespace csp::atmospheres {
 
 spdlog::logger& logger() {
   static auto logger = cs::utils::createLogger("csp-atmospheres");
-  return *logger.get();
+  return *logger;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
