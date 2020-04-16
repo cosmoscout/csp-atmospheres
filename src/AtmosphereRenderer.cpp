@@ -86,7 +86,7 @@ void AtmosphereRenderer::setClouds(std::string const& textureFile, float height)
   if (mCloudTextureFile != textureFile) {
     mCloudTextureFile = textureFile;
     mCloudTexture.reset();
-    if (textureFile != "") {
+    if (!textureFile.empty()) {
       mCloudTexture = cs::graphics::TextureLoader::loadFromFile(textureFile);
     }
     mShaderDirty = true;
