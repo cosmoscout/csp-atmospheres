@@ -235,6 +235,7 @@ void Plugin::update() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Plugin::onLoad() {
+  // Read settings from JSON.
   from_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings);
 
   // First try to re-configure existing atmospheres.
