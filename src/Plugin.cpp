@@ -243,6 +243,11 @@ void Plugin::onLoad() {
     auto settings = mPluginSettings->mAtmospheres.find(atmosphere->getCenterName());
     if (settings != mPluginSettings->mAtmospheres.end()) {
       // If there are settings for this atmosphere, reconfigure it.
+      auto anchor                           = mAllSettings->mAnchors.find(settings->first);
+      auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
+      atmosphere->setStartExistence(tStartExistence);
+      atmosphere->setEndExistence(tEndExistence);
+      atmosphere->setFrameName(anchor->second.mFrame);
       atmosphere->configure(settings->second);
     } else {
       // Else delete it.
