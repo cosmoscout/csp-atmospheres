@@ -57,8 +57,8 @@ class Plugin : public cs::core::PluginBase {
  private:
   void onLoad();
 
-  std::shared_ptr<Settings>                mPluginSettings = std::make_shared<Settings>();
-  std::vector<std::shared_ptr<Atmosphere>> mAtmospheres;
+  std::shared_ptr<Settings>                          mPluginSettings = std::make_shared<Settings>();
+  std::map<std::string, std::shared_ptr<Atmosphere>> mAtmospheres;
 
   int mEnableShadowsConnection     = -1;
   int mEnableHDRConnection         = -1;

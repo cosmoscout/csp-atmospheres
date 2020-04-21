@@ -134,9 +134,9 @@ void Plugin::init() {
     for (auto const& atmosphere : mAtmospheres) {
       if (mAllSettings->mGraphics.pEnableShadows.get() &&
           mPluginSettings->mEnableLightShafts.get()) {
-        atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
+        atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
-        atmosphere->getRenderer().setShadowMap(nullptr);
+        atmosphere.second->getRenderer().setShadowMap(nullptr);
       }
     }
   });
@@ -145,11 +145,11 @@ void Plugin::init() {
     for (auto const& atmosphere : mAtmospheres) {
       float const exposure = 0.6F;
       float const gamma    = 2.2F;
-      atmosphere->getRenderer().setUseToneMapping(!val, exposure, gamma);
+      atmosphere.second->getRenderer().setUseToneMapping(!val, exposure, gamma);
       if (val) {
-        atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
+        atmosphere.second->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
       } else {
-        atmosphere->getRenderer().setHDRBuffer(nullptr);
+        atmosphere.second->getRenderer().setHDRBuffer(nullptr);
       }
     }
   });
@@ -158,7 +158,7 @@ void Plugin::init() {
       mAllSettings->mGraphics.pAmbientBrightness.connect([this](float val) {
         for (auto const& atmosphere : mAtmospheres) {
           float const ambientBrightnessModifier = 0.4F;
-          atmosphere->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
+          atmosphere.second->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
         }
       });
 
@@ -166,9 +166,9 @@ void Plugin::init() {
     for (auto const& atmosphere : mAtmospheres) {
       if (mAllSettings->mGraphics.pEnableShadows.get() &&
           mPluginSettings->mEnableLightShafts.get()) {
-        atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
+        atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
-        atmosphere->getRenderer().setShadowMap(nullptr);
+        atmosphere.second->getRenderer().setShadowMap(nullptr);
       }
     }
   });
@@ -185,7 +185,7 @@ void Plugin::deInit() {
   logger().info("Unloading plugin...");
 
   for (auto const& atmosphere : mAtmospheres) {
-    mSolarSystem->unregisterAnchor(atmosphere);
+    mSolarSystem->unregisterAnchor(atmosphere.second);
   }
 
   mGuiManager->removeSettingsSection("Atmospheres");
@@ -212,7 +212,7 @@ void Plugin::update() {
   float fIntensity = 1.F;
   for (auto const& atmosphere : mAtmospheres) {
     if (mPluginSettings->mEnabled.get()) {
-      float brightness = atmosphere->getRenderer().getApproximateSceneBrightness();
+      float brightness = atmosphere.second->getRenderer().getApproximateSceneBrightness();
       fIntensity *= (1.F - brightness);
     }
   }
@@ -223,12 +223,12 @@ void Plugin::update() {
     double sunIlluminance = 10.0;
 
     if (mAllSettings->mGraphics.pEnableHDR.get()) {
-      sunIlluminance = mSolarSystem->getSunIlluminance(atmosphere->getWorldTransform()[3]);
+      sunIlluminance = mSolarSystem->getSunIlluminance(atmosphere.second->getWorldTransform()[3]);
     }
 
-    auto sunDirection = mSolarSystem->getSunDirection(atmosphere->getWorldTransform()[3]);
+    auto sunDirection = mSolarSystem->getSunDirection(atmosphere.second->getWorldTransform()[3]);
 
-    atmosphere->getRenderer().setSun(sunDirection, static_cast<float>(sunIlluminance));
+    atmosphere.second->getRenderer().setSun(sunDirection, static_cast<float>(sunIlluminance));
   }
 }
 
@@ -238,42 +238,40 @@ void Plugin::onLoad() {
   // Read settings from JSON.
   from_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings);
 
-  // First try to re-configure existing atmospheres.
-  for (auto&& atmosphere : mAtmospheres) {
-    auto settings = mPluginSettings->mAtmospheres.find(atmosphere->getCenterName());
+  // First try to re-configure existing atmospheres. We assume that they are similar if they have
+  // the same name in the settings (which means they are attached to an anchor with the same name).
+  auto atmosphere = mAtmospheres.begin();
+  while (atmosphere != mAtmospheres.end()) {
+    auto settings = mPluginSettings->mAtmospheres.find(atmosphere->first);
     if (settings != mPluginSettings->mAtmospheres.end()) {
       // If there are settings for this atmosphere, reconfigure it.
       auto anchor                           = mAllSettings->mAnchors.find(settings->first);
       auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
-      atmosphere->setStartExistence(tStartExistence);
-      atmosphere->setEndExistence(tEndExistence);
-      atmosphere->setFrameName(anchor->second.mFrame);
-      atmosphere->configure(settings->second);
+      atmosphere->second->setStartExistence(tStartExistence);
+      atmosphere->second->setEndExistence(tEndExistence);
+      atmosphere->second->setCenterName(anchor->second.mCenter);
+      atmosphere->second->setFrameName(anchor->second.mFrame);
+      atmosphere->second->configure(settings->second);
+
+      ++atmosphere;
     } else {
       // Else delete it.
-      mSolarSystem->unregisterAnchor(atmosphere);
-      atmosphere.reset();
+      mSolarSystem->unregisterAnchor(atmosphere->second);
+      atmosphere = mAtmospheres.erase(atmosphere);
     }
   }
 
-  // Then remove all which have been set to null.
-  mAtmospheres.erase(
-      std::remove_if(mAtmospheres.begin(), mAtmospheres.end(), [](auto const& p) { return !p; }),
-      mAtmospheres.end());
-
   // Then add new atmospheres.
-  for (auto const& atmoSettings : mPluginSettings->mAtmospheres) {
-    auto existing = std::find_if(mAtmospheres.begin(), mAtmospheres.end(),
-        [&](auto val) { return val->getCenterName() == atmoSettings.first; });
-    if (existing != mAtmospheres.end()) {
+  for (auto const& settings : mPluginSettings->mAtmospheres) {
+    if (mAtmospheres.find(settings.first) != mAtmospheres.end()) {
       continue;
     }
 
-    auto anchor = mAllSettings->mAnchors.find(atmoSettings.first);
+    auto anchor = mAllSettings->mAnchors.find(settings.first);
 
     if (anchor == mAllSettings->mAnchors.end()) {
       throw std::runtime_error(
-          "There is no Anchor \"" + atmoSettings.first + "\" defined in the settings.");
+          "There is no Anchor \"" + settings.first + "\" defined in the settings.");
     }
 
     auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
@@ -282,11 +280,11 @@ void Plugin::onLoad() {
         anchor->second.mFrame, tStartExistence, tEndExistence);
 
     atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
-    atmosphere->configure(atmoSettings.second);
+    atmosphere->configure(settings.second);
 
     mSolarSystem->registerAnchor(atmosphere);
 
-    mAtmospheres.emplace_back(atmosphere);
+    mAtmospheres.emplace(settings.first, atmosphere);
   }
 
   mAllSettings->mGraphics.pEnableShadows.touch(mEnableShadowsConnection);
