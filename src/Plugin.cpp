@@ -108,39 +108,40 @@ void Plugin::init() {
       "Enables or disables rendering of a water surface.",
       std::function([this](bool enable) { mPluginSettings->mEnableWater = enable; }));
   mPluginSettings->mEnableWater.connectAndTouch(
-      [this](bool enable) { mGuiManager->setCheckbox("atmosphere.setEnableWater", enable); });
+      [this](bool enable) { mGuiManager->setCheckboxValue("atmosphere.setEnableWater", enable); });
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableClouds",
       "Enables or disables rendering of a cloud layer.",
       std::function([this](bool enable) { mPluginSettings->mEnableClouds = enable; }));
   mPluginSettings->mEnableClouds.connectAndTouch(
-      [this](bool enable) { mGuiManager->setCheckbox("atmosphere.setEnableClouds", enable); });
+      [this](bool enable) { mGuiManager->setCheckboxValue("atmosphere.setEnableClouds", enable); });
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnable",
       "Enables or disables rendering of atmospheres.",
       std::function([this](bool enable) { mPluginSettings->mEnabled = enable; }));
   mPluginSettings->mEnabled.connectAndTouch(
-      [this](bool enable) { mGuiManager->setCheckbox("atmosphere.setEnable", enable); });
+      [this](bool enable) { mGuiManager->setCheckboxValue("atmosphere.setEnable", enable); });
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableLightShafts",
       "If shadows are enabled, this enables or disables rendering of light shafts in the "
       "atmosphere.",
       std::function([this](bool enable) { mPluginSettings->mEnableLightShafts = enable; }));
-  mPluginSettings->mEnableLightShafts.connectAndTouch(
-      [this](bool enable) { mGuiManager->setCheckbox("atmosphere.setEnableLightShafts", enable); });
+  mPluginSettings->mEnableLightShafts.connectAndTouch([this](bool enable) {
+    mGuiManager->setCheckboxValue("atmosphere.setEnableLightShafts", enable);
+  });
 
   mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
       "Higher values create a more realistic atmosphere.",
       std::function([this](double value) { mPluginSettings->mQuality = static_cast<int>(value); }));
   mPluginSettings->mQuality.connectAndTouch(
-      [this](int value) { mGuiManager->setSlider("atmosphere.setQuality", value); });
+      [this](int value) { mGuiManager->setSliderValue("atmosphere.setQuality", value); });
 
   mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
       "Sets the height of the water surface relative to the planet's radius.",
       std::function(
           [this](double value) { mPluginSettings->mWaterLevel = static_cast<float>(value); }));
   mPluginSettings->mWaterLevel.connectAndTouch(
-      [this](float value) { mGuiManager->setSlider("atmosphere.setWaterLevel", value); });
+      [this](float value) { mGuiManager->setSliderValue("atmosphere.setWaterLevel", value); });
 
   mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
