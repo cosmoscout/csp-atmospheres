@@ -36,35 +36,58 @@ namespace csp::atmospheres {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void from_json(const nlohmann::json& j, Plugin::Settings::Atmosphere& o) {
-  o.mAtmosphereHeight    = cs::core::parseProperty<double>("atmosphereHeight", j);
-  o.mMieHeight           = cs::core::parseProperty<double>("mieHeight", j);
-  o.mMieScatteringR      = cs::core::parseProperty<double>("mieScatteringR", j);
-  o.mMieScatteringG      = cs::core::parseProperty<double>("mieScatteringG", j);
-  o.mMieScatteringB      = cs::core::parseProperty<double>("mieScatteringB", j);
-  o.mMieAnisotropy       = cs::core::parseProperty<double>("mieAnisotropy", j);
-  o.mRayleighHeight      = cs::core::parseProperty<double>("rayleighHeight", j);
-  o.mRayleighScatteringR = cs::core::parseProperty<double>("rayleighScatteringR", j);
-  o.mRayleighScatteringG = cs::core::parseProperty<double>("rayleighScatteringG", j);
-  o.mRayleighScatteringB = cs::core::parseProperty<double>("rayleighScatteringB", j);
-  o.mRayleighAnisotropy  = cs::core::parseProperty<double>("rayleighAnisotropy", j);
+void from_json(nlohmann::json const& j, Plugin::Settings::Atmosphere& o) {
+  cs::core::Settings::deserialize(j, "atmosphereHeight", o.mAtmosphereHeight);
+  cs::core::Settings::deserialize(j, "mieHeight", o.mMieHeight);
+  cs::core::Settings::deserialize(j, "mieScatteringR", o.mMieScatteringR);
+  cs::core::Settings::deserialize(j, "mieScatteringG", o.mMieScatteringG);
+  cs::core::Settings::deserialize(j, "mieScatteringB", o.mMieScatteringB);
+  cs::core::Settings::deserialize(j, "mieAnisotropy", o.mMieAnisotropy);
+  cs::core::Settings::deserialize(j, "rayleighHeight", o.mRayleighHeight);
+  cs::core::Settings::deserialize(j, "rayleighScatteringR", o.mRayleighScatteringR);
+  cs::core::Settings::deserialize(j, "rayleighScatteringG", o.mRayleighScatteringG);
+  cs::core::Settings::deserialize(j, "rayleighScatteringB", o.mRayleighScatteringB);
+  cs::core::Settings::deserialize(j, "rayleighAnisotropy", o.mRayleighAnisotropy);
+  cs::core::Settings::deserialize(j, "cloudTexture", o.mCloudTexture);
+  cs::core::Settings::deserialize(j, "cloudHeight", o.mCloudHeight);
+}
 
-  o.mCloudTexture = cs::core::parseOptional<std::string>("cloudTexture", j);
-
-  o.mCloudHeight = cs::core::parseOptional<double>("cloudHeight", j);
-  if (!o.mCloudHeight) {
-    double const permille = 0.001;
-    o.mCloudHeight        = permille;
-  }
+void to_json(nlohmann::json& j, Plugin::Settings::Atmosphere const& o) {
+  cs::core::Settings::serialize(j, "atmosphereHeight", o.mAtmosphereHeight);
+  cs::core::Settings::serialize(j, "mieHeight", o.mMieHeight);
+  cs::core::Settings::serialize(j, "mieScatteringR", o.mMieScatteringR);
+  cs::core::Settings::serialize(j, "mieScatteringG", o.mMieScatteringG);
+  cs::core::Settings::serialize(j, "mieScatteringB", o.mMieScatteringB);
+  cs::core::Settings::serialize(j, "mieAnisotropy", o.mMieAnisotropy);
+  cs::core::Settings::serialize(j, "rayleighHeight", o.mRayleighHeight);
+  cs::core::Settings::serialize(j, "rayleighScatteringR", o.mRayleighScatteringR);
+  cs::core::Settings::serialize(j, "rayleighScatteringG", o.mRayleighScatteringG);
+  cs::core::Settings::serialize(j, "rayleighScatteringB", o.mRayleighScatteringB);
+  cs::core::Settings::serialize(j, "rayleighAnisotropy", o.mRayleighAnisotropy);
+  cs::core::Settings::serialize(j, "cloudTexture", o.mCloudTexture);
+  cs::core::Settings::serialize(j, "cloudHeight", o.mCloudHeight);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void from_json(const nlohmann::json& j, Plugin::Settings& o) {
-  cs::core::parseSection("csp-atmospheres", [&] {
-    o.mAtmospheres =
-        cs::core::parseMap<std::string, Plugin::Settings::Atmosphere>("atmospheres", j);
-  });
+void from_json(nlohmann::json const& j, Plugin::Settings& o) {
+  cs::core::Settings::deserialize(j, "atmospheres", o.mAtmospheres);
+  cs::core::Settings::deserialize(j, "enabled", o.mEnabled);
+  cs::core::Settings::deserialize(j, "quality", o.mQuality);
+  cs::core::Settings::deserialize(j, "waterLevel", o.mWaterLevel);
+  cs::core::Settings::deserialize(j, "enableClouds", o.mEnableClouds);
+  cs::core::Settings::deserialize(j, "enableLightShafts", o.mEnableLightShafts);
+  cs::core::Settings::deserialize(j, "enableWater", o.mEnableWater);
+}
+
+void to_json(nlohmann::json& j, Plugin::Settings const& o) {
+  cs::core::Settings::serialize(j, "atmospheres", o.mAtmospheres);
+  cs::core::Settings::serialize(j, "enabled", o.mEnabled);
+  cs::core::Settings::serialize(j, "quality", o.mQuality);
+  cs::core::Settings::serialize(j, "waterLevel", o.mWaterLevel);
+  cs::core::Settings::serialize(j, "enableClouds", o.mEnableClouds);
+  cs::core::Settings::serialize(j, "enableLightShafts", o.mEnableLightShafts);
+  cs::core::Settings::serialize(j, "enableWater", o.mEnableWater);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,100 +96,85 @@ void Plugin::init() {
 
   logger().info("Loading plugin...");
 
-  mPluginSettings = mAllSettings->mPlugins.at("csp-atmospheres");
+  mOnLoadConnection = mAllSettings->onLoad().connect([this]() { onLoad(); });
+  mOnSaveConnection = mAllSettings->onSave().connect(
+      [this]() { mAllSettings->mPlugins["csp-atmospheres"] = *mPluginSettings; });
 
   mGuiManager->addSettingsSectionToSideBarFromHTML(
       "Atmospheres", "blur_circular", "../share/resources/gui/atmospheres_settings.html");
   mGuiManager->addScriptToGuiFromJS("../share/resources/gui/js/csp-atmospheres.js");
 
-  for (auto const& atmoSettings : mPluginSettings.mAtmospheres) {
-    auto anchor = mAllSettings->mAnchors.find(atmoSettings.first);
-
-    if (anchor == mAllSettings->mAnchors.end()) {
-      throw std::runtime_error(
-          "There is no Anchor \"" + atmoSettings.first + "\" defined in the settings.");
-    }
-
-    auto   existence       = cs::core::getExistenceFromSettings(*anchor);
-    double tStartExistence = existence.first;
-    double tEndExistence   = existence.second;
-
-    auto atmosphere = std::make_shared<Atmosphere>(mProperties, atmoSettings.second,
-        anchor->second.mCenter, anchor->second.mFrame, tStartExistence, tEndExistence);
-
-    atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
-
-    mSolarSystem->registerAnchor(atmosphere);
-
-    mAtmospheres.emplace_back(atmosphere);
-  }
-
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableWater",
       "Enables or disables rendering of a water surface.",
-      std::function([this](bool enable) { mProperties->mEnableWater = enable; }));
+      std::function([this](bool enable) { mPluginSettings->mEnableWater = enable; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableClouds",
       "Enables or disables rendering of a cloud layer.",
-      std::function([this](bool enable) { mProperties->mEnableClouds = enable; }));
+      std::function([this](bool enable) { mPluginSettings->mEnableClouds = enable; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnable",
       "Enables or disables rendering of atmospheres.",
-      std::function([this](bool value) { mProperties->mEnabled = value; }));
+      std::function([this](bool value) { mPluginSettings->mEnabled = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setEnableLightShafts",
       "If shadows are enabled, this enables or disables rendering of light shafts in the "
       "atmosphere.",
-      std::function([this](bool value) { mProperties->mEnableLightShafts = value; }));
+      std::function([this](bool value) { mPluginSettings->mEnableLightShafts = value; }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setQuality",
       "Higher values create a more realistic atmosphere.",
-      std::function([this](double value) { mProperties->mQuality = static_cast<int>(value); }));
+      std::function([this](double value) { mPluginSettings->mQuality = static_cast<int>(value); }));
 
   mGuiManager->getGui()->registerCallback("atmosphere.setWaterLevel",
       "Sets the height of the water surface relative to the planet's radius.",
       std::function(
-          [this](double value) { mProperties->mWaterLevel = static_cast<float>(value); }));
+          [this](double value) { mPluginSettings->mWaterLevel = static_cast<float>(value); }));
 
-  mEnableShadowsConnection = mGraphicsEngine->pEnableShadows.connectAndTouch([this](bool /*val*/) {
+  mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
-      if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
-        atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
+      if (mAllSettings->mGraphics.pEnableShadows.get() &&
+          mPluginSettings->mEnableLightShafts.get()) {
+        atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
-        atmosphere->getRenderer().setShadowMap(nullptr);
+        atmosphere.second->getRenderer().setShadowMap(nullptr);
       }
     }
   });
 
-  mEnableHDRConnection = mGraphicsEngine->pEnableHDR.connectAndTouch([this](bool val) {
+  mEnableHDRConnection = mAllSettings->mGraphics.pEnableHDR.connect([this](bool val) {
     for (auto const& atmosphere : mAtmospheres) {
       float const exposure = 0.6F;
       float const gamma    = 2.2F;
-      atmosphere->getRenderer().setUseToneMapping(!val, exposure, gamma);
+      atmosphere.second->getRenderer().setUseToneMapping(!val, exposure, gamma);
       if (val) {
-        atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
+        atmosphere.second->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
       } else {
-        atmosphere->getRenderer().setHDRBuffer(nullptr);
+        atmosphere.second->getRenderer().setHDRBuffer(nullptr);
       }
     }
   });
 
   mAmbientBrightnessConnection =
-      mGraphicsEngine->pAmbientBrightness.connectAndTouch([this](float val) {
+      mAllSettings->mGraphics.pAmbientBrightness.connect([this](float val) {
         for (auto const& atmosphere : mAtmospheres) {
           float const ambientBrightnessModifier = 0.4F;
-          atmosphere->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
+          atmosphere.second->getRenderer().setAmbientBrightness(val * ambientBrightnessModifier);
         }
       });
 
-  mProperties->mEnableLightShafts.connectAndTouch([this](bool /*val*/) {
+  mPluginSettings->mEnableLightShafts.connect([this](bool /*val*/) {
     for (auto const& atmosphere : mAtmospheres) {
-      if (mGraphicsEngine->pEnableShadows.get() && mProperties->mEnableLightShafts.get()) {
-        atmosphere->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
+      if (mAllSettings->mGraphics.pEnableShadows.get() &&
+          mPluginSettings->mEnableLightShafts.get()) {
+        atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
-        atmosphere->getRenderer().setShadowMap(nullptr);
+        atmosphere.second->getRenderer().setShadowMap(nullptr);
       }
     }
   });
+
+  // Load settings.
+  onLoad();
 
   logger().info("Loading done.");
 }
@@ -177,7 +185,7 @@ void Plugin::deInit() {
   logger().info("Unloading plugin...");
 
   for (auto const& atmosphere : mAtmospheres) {
-    mSolarSystem->unregisterAnchor(atmosphere);
+    mSolarSystem->unregisterAnchor(atmosphere.second);
   }
 
   mGuiManager->removeSettingsSection("Atmospheres");
@@ -189,9 +197,11 @@ void Plugin::deInit() {
   mGuiManager->getGui()->unregisterCallback("atmosphere.setQuality");
   mGuiManager->getGui()->unregisterCallback("atmosphere.setWaterLevel");
 
-  mGraphicsEngine->pEnableShadows.disconnect(mEnableShadowsConnection);
-  mGraphicsEngine->pEnableHDR.disconnect(mEnableHDRConnection);
-  mGraphicsEngine->pAmbientBrightness.disconnect(mAmbientBrightnessConnection);
+  mAllSettings->mGraphics.pEnableShadows.disconnect(mEnableShadowsConnection);
+  mAllSettings->mGraphics.pEnableHDR.disconnect(mEnableHDRConnection);
+  mAllSettings->mGraphics.pAmbientBrightness.disconnect(mAmbientBrightnessConnection);
+  mAllSettings->onLoad().disconnect(mOnLoadConnection);
+  mAllSettings->onSave().disconnect(mOnSaveConnection);
 
   logger().info("Unloading done.");
 }
@@ -201,8 +211,8 @@ void Plugin::deInit() {
 void Plugin::update() {
   float fIntensity = 1.F;
   for (auto const& atmosphere : mAtmospheres) {
-    if (mProperties->mEnabled.get()) {
-      float brightness = atmosphere->getRenderer().getApproximateSceneBrightness();
+    if (mPluginSettings->mEnabled.get()) {
+      float brightness = atmosphere.second->getRenderer().getApproximateSceneBrightness();
       fIntensity *= (1.F - brightness);
     }
   }
@@ -212,14 +222,74 @@ void Plugin::update() {
   for (auto const& atmosphere : mAtmospheres) {
     double sunIlluminance = 10.0;
 
-    if (mGraphicsEngine->pEnableHDR.get()) {
-      sunIlluminance = mSolarSystem->getSunIlluminance(atmosphere->getWorldTransform()[3]);
+    if (mAllSettings->mGraphics.pEnableHDR.get()) {
+      sunIlluminance = mSolarSystem->getSunIlluminance(atmosphere.second->getWorldTransform()[3]);
     }
 
-    auto sunDirection = mSolarSystem->getSunDirection(atmosphere->getWorldTransform()[3]);
+    auto sunDirection = mSolarSystem->getSunDirection(atmosphere.second->getWorldTransform()[3]);
 
-    atmosphere->getRenderer().setSun(sunDirection, static_cast<float>(sunIlluminance));
+    atmosphere.second->getRenderer().setSun(sunDirection, static_cast<float>(sunIlluminance));
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Plugin::onLoad() {
+  // Read settings from JSON.
+  from_json(mAllSettings->mPlugins.at("csp-atmospheres"), *mPluginSettings);
+
+  // First try to re-configure existing atmospheres. We assume that they are similar if they have
+  // the same name in the settings (which means they are attached to an anchor with the same name).
+  auto atmosphere = mAtmospheres.begin();
+  while (atmosphere != mAtmospheres.end()) {
+    auto settings = mPluginSettings->mAtmospheres.find(atmosphere->first);
+    if (settings != mPluginSettings->mAtmospheres.end()) {
+      // If there are settings for this atmosphere, reconfigure it.
+      auto anchor                           = mAllSettings->mAnchors.find(settings->first);
+      auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
+      atmosphere->second->setStartExistence(tStartExistence);
+      atmosphere->second->setEndExistence(tEndExistence);
+      atmosphere->second->setCenterName(anchor->second.mCenter);
+      atmosphere->second->setFrameName(anchor->second.mFrame);
+      atmosphere->second->configure(settings->second);
+
+      ++atmosphere;
+    } else {
+      // Else delete it.
+      mSolarSystem->unregisterAnchor(atmosphere->second);
+      atmosphere = mAtmospheres.erase(atmosphere);
+    }
+  }
+
+  // Then add new atmospheres.
+  for (auto const& settings : mPluginSettings->mAtmospheres) {
+    if (mAtmospheres.find(settings.first) != mAtmospheres.end()) {
+      continue;
+    }
+
+    auto anchor = mAllSettings->mAnchors.find(settings.first);
+
+    if (anchor == mAllSettings->mAnchors.end()) {
+      throw std::runtime_error(
+          "There is no Anchor \"" + settings.first + "\" defined in the settings.");
+    }
+
+    auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
+
+    auto atmosphere = std::make_shared<Atmosphere>(mPluginSettings, anchor->second.mCenter,
+        anchor->second.mFrame, tStartExistence, tEndExistence);
+
+    atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
+    atmosphere->configure(settings.second);
+
+    mSolarSystem->registerAnchor(atmosphere);
+
+    mAtmospheres.emplace(settings.first, atmosphere);
+  }
+
+  mAllSettings->mGraphics.pEnableShadows.touch(mEnableShadowsConnection);
+  mAllSettings->mGraphics.pEnableHDR.touch(mEnableHDRConnection);
+  mAllSettings->mGraphics.pAmbientBrightness.touch(mAmbientBrightnessConnection);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

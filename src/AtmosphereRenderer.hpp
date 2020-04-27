@@ -33,7 +33,7 @@ namespace csp::atmospheres {
 /// very same position as your planet. Set its scale to the same size as your planet.
 class AtmosphereRenderer : public IVistaOpenGLDraw {
  public:
-  explicit AtmosphereRenderer(std::shared_ptr<Plugin::Properties> pProperties);
+  AtmosphereRenderer(std::shared_ptr<Plugin::Settings> settings);
 
   /// Updates the current sun position and brightness.
   void setSun(glm::vec3 const& direction, float illuminance);
@@ -45,7 +45,7 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void setWorldTransform(glm::dmat4 const& transform);
 
   /// When set, the shader will draw this texture at the given altitude.
-  void setCloudTexture(std::shared_ptr<VistaTexture> const& texture, float height);
+  void setClouds(std::string const& textureFile, float height);
 
   /// When set, the shader will make lookups in order to generate light shafts.
   void setShadowMap(std::shared_ptr<cs::graphics::ShadowMap> const& pShadowMap);
@@ -69,13 +69,13 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
 
   /// The maximum height of the atmosphere above the planets surface relative to the planets radius.
   /// Default depends on the preset; for Earth 60.0 / 6360.0 is assumed.
-  double getAtmosphereHeight() const;
-  void   setAtmosphereHeight(double dValue);
+  float getAtmosphereHeight() const;
+  void  setAtmosphereHeight(float dValue);
 
   /// The scale height for Mie scattering above the planets surface relative to the planets radius.
   /// Default depends on the preset; for Earth 1.2 / 6360.0 is assumed.
-  double getMieHeight() const;
-  void   setMieHeight(double dValue);
+  float getMieHeight() const;
+  void  setMieHeight(float dValue);
 
   /// The Mie scattering values. Default depends on the preset; for Earth (21.0, 21.0, 21.0) is
   /// assumed.
@@ -83,13 +83,13 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void      setMieScattering(const glm::vec3& vValue);
 
   /// The Mie scattering anisotropy. Default depends on the preset; for Earth 0.76 is assumed.
-  double getMieAnisotropy() const;
-  void   setMieAnisotropy(double dValue);
+  float getMieAnisotropy() const;
+  void  setMieAnisotropy(float dValue);
 
   /// The scale height for Rayleigh scattering above the planets surface relative to the planets
   /// radius. Default depends on the preset; for Earth 8.0 / 6360.0 is assumed.
-  double getRayleighHeight() const;
-  void   setRayleighHeight(double dValue);
+  float getRayleighHeight() const;
+  void  setRayleighHeight(float dValue);
 
   /// The Rayleigh scattering values. Default depends on the preset; for Earth (5.8, 13.5, 21.1) is
   /// assumed.
@@ -97,8 +97,8 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void      setRayleighScattering(const glm::vec3& vValue);
 
   /// The Rayleigh scattering anisotropy. Default depends on the preset; for Earth 0.0 is assumed.
-  double getRayleighAnisotropy() const;
-  void   setRayleighAnisotropy(double dValue);
+  float getRayleighAnisotropy() const;
+  void  setRayleighAnisotropy(float dValue);
 
   /// If true, an artificial disc is drawn in the suns direction.
   bool getDrawSun() const;
@@ -136,12 +136,13 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   void initData();
   void updateShader();
 
-  std::shared_ptr<Plugin::Properties> mProperties;
-  std::shared_ptr<VistaTexture>       mCloudTexture;
-  float                               mCloudHeight    = 0.001F;
-  bool                                mUseClouds      = false;
-  glm::dvec3                          mRadii          = glm::dvec3(1.0, 1.0, 1.0);
-  glm::dmat4                          mWorldTransform = glm::dmat4(1.0);
+  std::shared_ptr<Plugin::Settings> mPluginSettings;
+  std::unique_ptr<VistaTexture>     mCloudTexture;
+  std::string                       mCloudTextureFile;
+  float                             mCloudHeight    = 0.001F;
+  bool                              mUseClouds      = false;
+  glm::dvec3                        mRadii          = glm::dvec3(1.0, 1.0, 1.0);
+  glm::dmat4                        mWorldTransform = glm::dmat4(1.0);
 
   std::shared_ptr<cs::graphics::ShadowMap> mShadowMap;
   std::shared_ptr<cs::graphics::HDRBuffer> mHDRBuffer;
@@ -162,19 +163,19 @@ class AtmosphereRenderer : public IVistaOpenGLDraw {
   bool      mDrawWater         = false;
   float     mWaterLevel        = 0.0F;
   float     mAmbientBrightness = 0.2F;
-  double    mAtmosphereHeight  = 1.0;
+  float     mAtmosphereHeight  = 1.0F;
   int       mPrimaryRaySteps   = 15;
   int       mSecondaryRaySteps = 4;
   float     mSunIntensity      = 1.F;
   glm::vec3 mSunDirection      = glm::vec3(1, 0, 0);
 
-  double    mMieHeight     = 0.0;
+  float     mMieHeight     = 0.0F;
   glm::vec3 mMieScattering = glm::vec3(1, 1, 1);
-  double    mMieAnisotropy = 0.0;
+  float     mMieAnisotropy = 0.0F;
 
-  double    mRayleighHeight     = 0.0;
+  float     mRayleighHeight     = 0.0F;
   glm::vec3 mRayleighScattering = glm::vec3(1, 1, 1);
-  double    mRayleighAnisotropy = 0.0;
+  float     mRayleighAnisotropy = 0.0F;
 
   float mApproximateBrightness = 0.0F;
 
