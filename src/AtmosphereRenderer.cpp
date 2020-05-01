@@ -341,6 +341,8 @@ void AtmosphereRenderer::updateShader() {
   cs::utils::replaceString(sFrag, "USE_SHADOWMAP", std::to_string(mShadowMap != nullptr));
   cs::utils::replaceString(sFrag, "USE_CLOUDMAP", std::to_string(mUseClouds && mCloudTexture));
   cs::utils::replaceString(sFrag, "ENABLE_HDR", std::to_string(mHDRBuffer != nullptr));
+  cs::utils::replaceString(sFrag, "HDR_SAMPLES",
+      mHDRBuffer == nullptr ? "0" : std::to_string(mHDRBuffer->getMultiSamples()));
 
   mAtmoShader.InitVertexShaderFromString(sVert);
   mAtmoShader.InitFragmentShaderFromString(sFrag);

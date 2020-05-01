@@ -57,8 +57,14 @@ const char* AtmosphereRenderer::cAtmosphereFrag0 = R"(
   } vsIn;
 
   // uniforms
-  uniform sampler2D uDepthBuffer;
-  uniform sampler2D uColorBuffer;
+  #if HDR_SAMPLES > 0
+    uniform sampler2DMS uColorBuffer;
+    uniform sampler2DMS uDepthBuffer;
+  #else
+    uniform sampler2D uColorBuffer;
+    uniform sampler2D uDepthBuffer;
+  #endif
+
   uniform sampler2D uCloudTexture;
   uniform mat4      uMatInvMVP;
   uniform mat4      uMatInvMV;
@@ -364,6 +370,31 @@ const char* AtmosphereRenderer::cAtmosphereFrag0 = R"(
 
 // needs to be splitted because MSVC doesn't like long strings
 const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
+  // Returns the depth at the current pixel. If multisampling is used, we take the minimum depth.
+  float GetDepth() {
+    #if HDR_SAMPLES > 0
+      float depth = 0.0;
+      for (int i = 0; i < HDR_SAMPLES; ++i) {
+        depth = min(depth, texelFetch(uDepthBuffer, ivec2(vsIn.vTexcoords * textureSize(uDepthBuffer)), i).r);
+      }
+      return depth;
+    #else
+      return texture(uDepthBuffer, vsIn.vTexcoords).r;
+    #endif
+  }
+
+  // Returns the background color at the current pixel. If multisampling is used, we take the average color.
+  vec3 GetLandColor() {
+    #if HDR_SAMPLES > 0
+      vec3 color = vec3(0.0);
+      for (int i = 0; i < HDR_SAMPLES; ++i) {
+        color += texelFetch(uColorBuffer, ivec2(vsIn.vTexcoords * textureSize(uColorBuffer)), i).rgb;
+      }
+      return color / HDR_SAMPLES;
+    #else
+      return texture(uColorBuffer, vsIn.vTexcoords).rgb;
+    #endif
+  }
 
   // returns the color of the incoming light for any direction and position
   // The ray is defined by its origin and direction. The two points are defined
@@ -429,8 +460,12 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
   // returns the model space distance to the surface of the depth buffer at the
   // current pixel, or 10 if there is nothing in the depth buffer
   float GetOpaqueDepth() {
-    vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
-    float fDepth     = texture(uDepthBuffer, vsIn.vTexcoords).r;
+    #if HDR_SAMPLES > 0
+      vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
+    #else
+      vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+    #endif
+    float fDepth = GetDepth();
 
     #if USE_LINEARDEPTHBUFFER
 
@@ -479,11 +514,6 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
     return true;
   }
 
-  // returns the background color at the current pixel
-  vec3 GetLandColor() {
-    return texture(uColorBuffer, vsIn.vTexcoords).rgb;
-  }
-
   // returns a hard-coded color scale for a given ocean depth.
   // Could be configurable in future.
   vec4 GetWaterShade(float v) {
@@ -505,7 +535,7 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
   // returns an artifical ocean color based on the water depth
   vec3 GetWaterColor(vec3 vRayOrigin, vec3 vRayDir, vec2 vStartEnd) {
     // sub-water surface
-    vec3 color = texture(uColorBuffer, vsIn.vTexcoords).rgb;
+    vec3 color = GetLandColor();
 
     vec3 surface = vRayOrigin + vRayDir * vStartEnd.x;
     vec3 normal = normalize(surface);
@@ -611,8 +641,12 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
 
     // sun position ----------------------------------------------------------
     #if DRAW_SUN
-      vec2  vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
-      float fDepth     = texture(uDepthBuffer, vsIn.vTexcoords).r;
+      #if HDR_SAMPLES > 0
+        vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
+      #else
+        vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+      #endif
+      float fDepth = GetDepth();
 
       if (fDepth == 1.0) {
         float fSunAngle = max(0,dot(vRayDir, uSunDir));
