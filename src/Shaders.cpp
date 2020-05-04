@@ -461,9 +461,9 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
   // current pixel, or 10 if there is nothing in the depth buffer
   float GetOpaqueDepth() {
     #if HDR_SAMPLES > 0
-      vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
+      vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer);
     #else
-      vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+      vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer, 0);
     #endif
     float fDepth = GetDepth();
 
@@ -642,9 +642,9 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
     // sun position ----------------------------------------------------------
     #if DRAW_SUN
       #if HDR_SAMPLES > 0
-        vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer);
+        vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer);
       #else
-        vec2 vTexcoords = vsIn.vTexcoords*textureSize(uDepthBuffer, 0);
+        vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer, 0);
       #endif
       float fDepth = GetDepth();
 
