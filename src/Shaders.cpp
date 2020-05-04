@@ -373,7 +373,7 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
   // Returns the depth at the current pixel. If multisampling is used, we take the minimum depth.
   float GetDepth() {
     #if HDR_SAMPLES > 0
-      float depth = 0.0;
+      float depth = 1.0;
       for (int i = 0; i < HDR_SAMPLES; ++i) {
         depth = min(depth, texelFetch(uDepthBuffer, ivec2(vsIn.vTexcoords * textureSize(uDepthBuffer)), i).r);
       }
@@ -460,11 +460,6 @@ const char* AtmosphereRenderer::cAtmosphereFrag1 = R"(
   // returns the model space distance to the surface of the depth buffer at the
   // current pixel, or 10 if there is nothing in the depth buffer
   float GetOpaqueDepth() {
-    #if HDR_SAMPLES > 0
-      vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer);
-    #else
-      vec2 vTexcoords = vsIn.vTexcoords * textureSize(uDepthBuffer, 0);
-    #endif
     float fDepth = GetDepth();
 
     #if USE_LINEARDEPTHBUFFER
